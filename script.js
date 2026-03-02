@@ -1417,31 +1417,42 @@ async function generateAI() {
     const j     = getJob();
     const style = document.getElementById("ai-style").value;
     const box   = document.getElementById("ai-box");
+
     const rooms = (j.rooms || []).map(r =>
         `${r.name}: ${r.type}, ${r.area} m², £${r.total}`
     ).join("; ");
 
     box.innerHTML = `<div class="ai-loading">✨ Generating…</div>`;
+
     try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
+        const resp = await fetch("/api/ai-description", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 200,
-                messages: [{
-                    role: "user",
-                    content: `Write a single short paragraph (60-90 words) describing the scope of work for a tiling job quote. Style: ${style}. Customer: ${j.customerName}. Rooms: ${rooms}. Use UK English, third person, professional tone.`
-                }]
+                style,
+                customerName: j.customerName || "",
+                rooms,
             })
         });
-        const data = await res.json();
-        const text = data.content?.[0]?.text || "Could not generate description.";
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+            const msg = data?.error || `AI request failed (${resp.status})`;
+            console.error("AI description error:", msg, data);
+            box.innerHTML = `<div class="ai-result">Error generating description: ${esc(msg)}</div>`;
+            return;
+        }
+
+        const text = data?.text || "Could not generate description.";
         box.innerHTML = `<div class="ai-result">${esc(text)}</div>`;
-    } catch(e) {
+    } catch (e) {
+        console.error("AI description exception:", e);
         box.innerHTML = `<div class="ai-result">Error generating description. Please try again.</div>`;
     }
 }
+
+
 
 /* ─── CSV Export ─── */
 function exportCSV() {
