@@ -1,0 +1,2700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TileIQ Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+/* ================================================================
+   TileIQ Pro – style.css
+================================================================ */
+
+:root {
+    --bg:       #f4f4f2;
+    --surface:  #ffffff;
+    --border:   #e2e2de;
+    --ink:      #1e2328;
+    --muted:    #72757a;
+    --amber:    #e6af2e;
+    --amber-lt: #fdf6e3;
+    --green:    #27ae60;
+    --red:      #e74c3c;
+    --blue:     #2980b9;
+    --radius:   10px;
+    --shadow:   0 2px 8px rgba(0,0,0,.07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+
+/* ── SCREENS ──────────────────────────────────────────────── */
+.screen { display: block; }
+.hidden { display: none !important; }
+
+/* ── LOADING ──────────────────────────────────────────────── */
+.loading-center {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100vh; gap: 10px;
+}
+.logo-mark { font-size: 40px; }
+.logo-text  { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; }
+.loading-bar {
+    width: 160px; height: 3px; background: var(--border);
+    border-radius: 2px; overflow: hidden; margin-top: 8px;
+}
+.loading-fill {
+    height: 100%; width: 0; background: var(--amber);
+    animation: loadprog 0.7s ease-out forwards;
+}
+@keyframes loadprog { to { width: 100%; } }
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.app-header {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+}
+.header-brand { display: flex; align-items: center; gap: 8px; }
+.brand-icon   { font-size: 18px; }
+.brand-name   { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; color: var(--amber); }
+.header-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; flex: 1; text-align: center; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── BUTTONS ──────────────────────────────────────────────── */
+button { cursor: pointer; font-family: inherit; font-size: 14px; border: none; border-radius: 8px; transition: all .15s; }
+
+.btn-primary {
+    background: var(--amber); color: var(--ink);
+    font-weight: 600; padding: 9px 18px;
+}
+.btn-primary:hover { background: #d4a028; }
+
+.btn-secondary {
+    background: transparent; color: var(--ink);
+    border: 1.5px solid var(--border); padding: 9px 16px;
+}
+.btn-secondary:hover { background: var(--bg); }
+
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+.btn-back {
+    background: transparent; color: rgba(255,255,255,.8);
+    padding: 6px 10px; font-size: 13px;
+}
+.btn-back:hover { color: #fff; }
+
+.btn-icon {
+    background: transparent; color: rgba(255,255,255,.7);
+    font-size: 18px; padding: 4px 8px;
+}
+.btn-icon:hover { color: #fff; }
+
+.btn-danger {
+    background: transparent; color: var(--red);
+    border: 1.5px solid var(--red); padding: 9px 16px;
+    width: 100%; margin-top: 8px;
+}
+.btn-danger:hover { background: var(--red); color: #fff; }
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.page-body { padding: 16px; display: flex; flex-direction: column; gap: 0; }
+
+.page-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.page-title     { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
+
+.badge {
+    background: var(--amber); color: var(--ink);
+    font-size: 12px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px;
+}
+
+/* ── STATUS BADGES ──────────────────────────────────────── */
+.status-badge { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; }
+.badge-enquiry  { background: #eef2ff; color: #4a5abf; }
+.badge-quoted   { background: #fffbea; color: #b7860a; }
+.badge-accepted { background: #eafaf1; color: #1e8449; }
+.badge-complete { background: #f0f0f0; color: #555; }
+
+/* ── CARDS ──────────────────────────────────────────────── */
+.form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+}
+
+/* ── FIELDS ──────────────────────────────────────────────── */
+.field-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field-group:last-child { margin-bottom: 0; }
+.field-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.field-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+input, select, textarea {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 15px; color: var(--ink);
+    background: var(--bg);
+    outline: none; transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--amber); background: #fff; }
+textarea { resize: vertical; }
+
+.form-section-label {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 12px;
+    padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+
+.checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.checkbox-label input { width: auto; }
+
+.form-actions { display: flex; gap: 10px; margin-top: 16px; }
+.form-actions button { flex: 1; }
+
+/* ── JOB CARDS ──────────────────────────────────────────── */
+.job-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform .1s, box-shadow .1s;
+}
+.job-card:hover       { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+.job-card:active      { transform: translateY(0); }
+.job-card-header      { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.job-card-name        { font-weight: 600; font-size: 16px; margin-bottom: 2px; }
+.job-card-sub         { font-size: 13px; color: var(--muted); }
+.job-card-footer      { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.job-card-total       { font-weight: 700; color: var(--ink); }
+
+/* ── JOB VIEW ──────────────────────────────────────────── */
+.customer-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+.cbar-name    { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.cbar-address { color: var(--muted); margin-bottom: 4px; }
+.cbar-contact { color: var(--muted); margin-right: 12px; font-size: 13px; }
+.cbar-badge   { display: inline-block; background: var(--amber-lt); color: #8a6000; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; margin-top: 4px; }
+
+.section-heading-row { margin-bottom: 8px; }
+
+.empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state-small {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 14px;
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+}
+
+/* ── ROOM CARDS ──────────────────────────────────────────── */
+.room-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+}
+.room-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.room-card-name   { font-weight: 600; font-size: 15px; }
+.room-card-meta   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.room-card-total  { font-weight: 700; font-size: 17px; color: var(--amber); white-space: nowrap; }
+.room-card-actions{ display: flex; gap: 8px; margin-top: 10px; }
+
+.surf-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+.surf-chip  {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 8px;
+    font-size: 12px; color: var(--muted);
+}
+
+.running-total {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--ink); color: #fff;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+.running-total strong { font-size: 18px; color: var(--amber); }
+
+.job-actions { display: flex; gap: 10px; margin-bottom: 8px; }
+.job-actions button { flex: 1; }
+
+/* ── ROOM EDITOR ──────────────────────────────────────────── */
+.stype-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; margin-bottom: 14px;
+}
+.stype-btn {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 8px;
+    font-size: 22px;
+    text-align: center; cursor: pointer;
+    transition: all .15s;
+    color: var(--ink);
+    line-height: 1.4;
+}
+.stype-btn span { display: block; font-size: 12px; font-weight: 600; margin-top: 4px; }
+.stype-btn:hover  { border-color: var(--amber); background: var(--amber-lt); }
+.stype-active     { border-color: var(--amber) !important; background: var(--amber-lt) !important; }
+
+.measure-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 14px;
+}
+
+.divider-label {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin: 14px 0 10px;
+}
+.divider-label::before, .divider-label::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── LIVE TOTAL ──────────────────────────────────────────── */
+.live-total-card {
+    background: var(--ink); color: #fff;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 0;
+}
+.live-total-label { font-size: 12px; color: rgba(255,255,255,.6); margin-bottom: 4px; }
+.live-total-value { font-size: 26px; font-weight: 700; color: var(--amber); }
+.total-breakdown  { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.breakdown-item   { font-size: 12px; color: rgba(255,255,255,.65); }
+
+/* ── QUOTE ──────────────────────────────────────────────── */
+.quote-preview-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+}
+.quote-doc { font-size: 13px; }
+.quote-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid var(--amber); }
+.quote-company-name { font-size: 16px; font-weight: 700; font-family: 'Syne', sans-serif; color: var(--ink); margin-bottom: 4px; }
+.quote-company { color: var(--muted); font-size: 12px; }
+.quote-meta { text-align: right; color: var(--muted); font-size: 12px; }
+.quote-ref  { font-weight: 700; color: var(--ink); font-size: 14px; margin-bottom: 3px; }
+.quote-customer { background: var(--bg); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
+
+.quote-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; }
+.quote-table th { background: var(--ink); color: var(--amber); padding: 6px 8px; text-align: left; }
+.quote-table th:last-child, .quote-table td:last-child { text-align: right; }
+.quote-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); color: var(--muted); }
+.quote-table td:first-child { color: var(--ink); }
+
+.quote-totals { border-top: 2px solid var(--border); padding-top: 10px; }
+.quote-total-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; color: var(--muted); }
+.quote-grand { font-size: 15px; font-weight: 700; color: var(--ink); padding-top: 6px; border-top: 1px solid var(--border); margin-top: 4px; }
+.quote-terms { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+.ai-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+.ai-loading { color: var(--muted); font-size: 13px; padding: 10px 0; }
+.ai-result  { font-size: 13px; line-height: 1.6; padding: 10px 0; color: var(--muted); border-top: 1px solid var(--border); margin-top: 10px; }
+
+.action-row { display: flex; gap: 10px; margin-bottom: 8px; }
+.action-row button { flex: 1; }
+
+/* ── PREP OPTIONS ─────────────────────────────────────────── */
+.prep-options { display: flex; flex-direction: column; gap: 6px; }
+
+.prep-option {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+.prep-option:hover { border-color: var(--amber); background: var(--amber-lt); }
+.prep-option input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--amber); }
+.prep-option input[type="checkbox"]:checked + .prep-text { color: var(--ink); }
+
+.prep-text {
+    display: flex; justify-content: space-between;
+    align-items: center; flex: 1;
+    font-size: 14px; color: var(--muted);
+}
+.prep-cost {
+    font-size: 12px; font-weight: 600;
+    color: var(--muted); white-space: nowrap;
+    margin-left: 8px;
+}
+
+.prep-depth {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px 4px 38px;
+    font-size: 13px; color: var(--muted);
+}
+.prep-depth label { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.prep-depth select { width: auto; padding: 6px 10px; font-size: 13px; }
+
+/* ── LABOUR TOGGLE ─────────────────────────────────────────── */
+.labour-toggle {
+    display: flex;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.ltbtn {
+    flex: 1; padding: 9px 12px;
+    background: var(--bg); color: var(--muted);
+    border: none; border-radius: 0;
+    font-weight: 600; font-size: 14px;
+    transition: all .15s;
+}
+.ltbtn:first-child { border-right: 1.5px solid var(--border); }
+.ltbtn-active {
+    background: var(--amber) !important;
+    color: var(--ink) !important;
+}
+.ltbtn:hover:not(.ltbtn-active) { background: var(--amber-lt); color: var(--ink); }
+
+/* ── Room cost breakdown bar ─────────────────────────────── */
+.room-cost-breakdown {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0 4px;
+    flex-wrap: wrap;
+}
+.rcb-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.rcb-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted, #888);
+    line-height: 1;
+}
+.rcb-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink, #1a1a2e);
+    line-height: 1.3;
+}
+.rcb-sep {
+    color: var(--border, #ddd);
+    font-size: 14px;
+    padding: 0 2px;
+    align-self: center;
+}
+
+/* ── Quote table room rows ───────────────────────────────── */
+.qt-room-header td {
+    background: #f4f4f8;
+    padding-top: 10px;
+    padding-bottom: 6px;
+    font-size: 13px;
+}
+.qt-area-note {
+    font-weight: 400;
+    color: #888;
+    font-size: 12px;
+    margin-left: 6px;
+}
+.qt-mat-row td {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 12px;
+    color: #444;
+}
+.qt-indent {
+    padding-left: 16px !important;
+}
+.qt-detail {
+    color: #999;
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.live-total-m2 {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted, #888);
+    margin-left: 8px;
+    letter-spacing: 0.01em;
+}
+
+/* ── Room card materials schedule ────────────────────────── */
+.room-mat-schedule {
+    font-size: 11.5px;
+    color: var(--muted, #777);
+    padding: 4px 0 6px;
+    border-top: 1px dashed var(--border, #e0e0e8);
+    margin-top: 4px;
+    line-height: 1.6;
+}
+
+/* ── Quote materials schedule ────────────────────────────── */
+.quote-mat-schedule {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #f8f8fc;
+    border: 1px solid #e4e4f0;
+    border-radius: 6px;
+    font-size: 13px;
+}
+.qms-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #888;
+    margin-bottom: 8px;
+}
+.qms-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+.qms-row:last-child { border-bottom: none; }
+.qms-row span:last-child { font-weight: 600; }
+
+/* ── Materials Screen ─────────────────────────────────────── */
+.mat-totals-card {
+    background: var(--primary, #1a1a2e);
+    color: #fff;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.mat-totals-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    opacity: .7;
+    margin-bottom: 12px;
+}
+.mat-totals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+}
+.mat-total-item {
+    background: rgba(255,255,255,.08);
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+.mat-total-label {
+    display: block;
+    font-size: 10px;
+    opacity: .7;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+}
+.mat-total-value {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.mat-room-block {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--border, #e4e4f0);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.mat-room-title {
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border, #e4e4f0);
+    background: #f8f8fc;
+}
+.mat-room-area {
+    font-weight: 400;
+    font-size: 12px;
+    color: #888;
+    margin-left: 8px;
+}
+.mat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.mat-table th {
+    padding: 6px 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #888;
+    border-bottom: 1px solid var(--border, #e4e4f0);
+    white-space: nowrap;
+}
+.mat-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f5;
+    vertical-align: top;
+    line-height: 1.4;
+}
+.mat-surf-row:last-child td { border-bottom: none; }
+.mat-sub {
+    font-size: 10px;
+    color: #aaa;
+    display: block;
+}
+
+/* ── Deduction presets ───────────────────────────────────── */
+.deduct-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.deduct-btn {
+    background: #f0f0f8;
+    border: 1px solid #d0d0e0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    min-width: 72px;
+    color: #333;
+    transition: background .15s;
+}
+.deduct-btn span {
+    display: block;
+    font-size: 10px;
+    color: #888;
+    margin-top: 1px;
+}
+.deduct-btn:hover { background: #e2e2f4; border-color: #a0a0cc; }
+.deduct-btn-wide { min-width: 60px; }
+.deduct-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+}
+.deduct-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #fff0f0;
+    border: 1px solid #f0c0c0;
+    border-radius: 20px;
+    padding: 3px 8px 3px 10px;
+    font-size: 11px;
+    color: #c00;
+}
+.deduct-remove {
+    background: none;
+    border: none;
+    color: #c00;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+}
+
+/* ── Deduction section (standalone, outside field-group) ─── */
+.deduct-section {
+    background: #f8f4ff;
+    border: 1px dashed #c9b8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+.deduct-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: #8060c0;
+    margin-bottom: 8px;
+}
+
+/* ── Deduction checkbox chips ─────────────────────────── */
+.deduct-chip {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f4f4f8;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    cursor: pointer;
+    min-width: 80px;
+    line-height: 1.4;
+    user-select: none;
+    transition: background .15s, border-color .15s;
+}
+.deduct-chip input[type=checkbox] {
+    display: none;
+}
+.deduct-chip small {
+    font-size: 10px;
+    font-weight: 400;
+    color: #888;
+    display: block;
+}
+.deduct-chip:has(input:checked) {
+    background: #fff0f0;
+    border-color: #cc0000;
+    color: #cc0000;
+}
+.deduct-chip:has(input:checked) small {
+    color: #cc0000;
+    opacity: 0.7;
+}
+.deduct-chip-manual {
+    background: #f0f4ff;
+    border-color: #b0c0e8;
+    color: #336;
+}
+.deduct-chip-manual small { color: #669; }
+.deduct-chip-manual:hover { background: #e4ecff; border-color: #8090cc; }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+    <div class="loading-center">
+        <div class="logo-mark">⬛</div>
+        <div class="logo-text">TileIQ Pro</div>
+        <div class="loading-bar"><div class="loading-fill"></div></div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen hidden">
+    <header class="app-header">
+        <div class="header-brand">
+            <span class="brand-icon">⬛</span>
+            <span class="brand-name">TileIQ Pro</span>
+        </div>
+        <div class="header-actions">
+            <button onclick="goSettings()" class="btn-icon">⚙</button>
+            <button onclick="goNewJob()" class="btn-primary">+ New Job</button>
+        </div>
+    </header>
+    <div class="page-body">
+        <div class="page-title-row">
+            <h2 class="page-title">Jobs</h2>
+            <span id="job-count" class="badge">0</span>
+        </div>
+        <div id="jobs-list"></div>
+        <div id="jobs-empty" class="empty-state hidden">
+            <div class="empty-icon">📋</div>
+            <p>No jobs yet — tap + New Job to start.</p>
+        </div>
+    </div>
+</div>
+
+<!-- NEW JOB -->
+<div id="screen-new-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Back</button>
+        <h2 class="header-title">New Job</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Customer Details</div>
+            <div class="field-group">
+                <label>Customer Name *</label>
+                <input id="nj-name" placeholder="Full name">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Phone</label>
+                    <input id="nj-phone" type="tel" placeholder="07xxx xxxxxx">
+                </div>
+                <div class="field-group">
+                    <label>Email</label>
+                    <input id="nj-email" type="email" placeholder="name@email.com">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Address</label>
+                <input id="nj-address" placeholder="Street address">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Town / City</label>
+                    <input id="nj-city">
+                </div>
+                <div class="field-group">
+                    <label>Postcode</label>
+                    <input id="nj-postcode">
+                </div>
+            </div>
+
+            <div class="form-section-label" style="margin-top:18px;">Job Details</div>
+            <div class="field-group">
+                <label>Job Description (optional)</label>
+                <input id="nj-desc" placeholder="e.g. Kitchen floor + bathroom walls">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Status</label>
+                    <select id="nj-status">
+                        <option value="enquiry">Enquiry</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Tile Supply</label>
+                    <select id="nj-supply">
+                        <option value="contractor">We supply tiles</option>
+                        <option value="customer">Customer supplies</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button onclick="goDashboard()" class="btn-secondary">Cancel</button>
+                <button onclick="createJob()" class="btn-primary">Next: Add Rooms →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JOB VIEW -->
+<div id="screen-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Jobs</button>
+        <h2 id="job-header-title" class="header-title"></h2>
+        <button onclick="goAddRoom()" class="btn-primary">+ Room</button>
+    </header>
+    <div class="page-body">
+        <div id="job-customer-bar" class="customer-bar"></div>
+        <div class="section-heading-row">
+            <span class="form-section-label" style="margin:0;">Rooms</span>
+        </div>
+        <div id="job-rooms-list"></div>
+        <div id="job-rooms-empty" class="empty-state-small">
+            Tap <strong>+ Room</strong> above to add your first room.
+        </div>
+        <div id="job-running-total" class="running-total hidden"></div>
+        <div class="job-actions">
+            <button onclick="goEditJob()" class="btn-secondary">✏ Edit Details</button>
+            <button onclick="goMaterials()" class="btn-secondary">📦 Materials</button>
+            <button onclick="goQuote()" class="btn-primary">Quote →</button>
+        </div>
+        <button onclick="deleteJob()" class="btn-danger">🗑 Delete Job</button>
+    </div>
+</div>
+
+<!-- MATERIALS BREAKDOWN -->
+<div id="screen-materials" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Materials</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div id="materials-output"></div>
+    </div>
+</div>
+
+<!-- EDIT JOB -->
+<div id="screen-edit-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Edit Job</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Customer Details</div>
+            <div class="field-group">
+                <label>Customer Name *</label>
+                <input id="ej-name">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Phone</label>
+                    <input id="ej-phone" type="tel">
+                </div>
+                <div class="field-group">
+                    <label>Email</label>
+                    <input id="ej-email" type="email">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Address</label>
+                <input id="ej-address">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Town / City</label>
+                    <input id="ej-city">
+                </div>
+                <div class="field-group">
+                    <label>Postcode</label>
+                    <input id="ej-postcode">
+                </div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Job Details</div>
+            <div class="field-group">
+                <label>Job Description</label>
+                <input id="ej-desc">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Status</label>
+                    <select id="ej-status">
+                        <option value="enquiry">Enquiry</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Tile Supply</label>
+                    <select id="ej-supply">
+                        <option value="contractor">We supply tiles</option>
+                        <option value="customer">Customer supplies</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button onclick="goJob()" class="btn-secondary">Cancel</button>
+                <button onclick="saveEditJob()" class="btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROOM EDITOR -->
+<div id="screen-room" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Rooms</button>
+        <h2 id="room-screen-title" class="header-title">Add Room</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+
+        <div class="form-card" style="margin-bottom:14px;">
+            <div class="field-group" style="margin-bottom:10px;">
+                <label>Room Name *</label>
+                <input id="rm-name" placeholder="e.g. Main Bathroom">
+            </div>
+            <label class="checkbox-label" style="margin-bottom:12px;">
+                <input type="checkbox" id="rm-customer-tiles" onchange="rmCalc()">
+                Customer supplies tiles (no tile cost)
+            </label>
+            <div class="field-group" style="margin-bottom:0;">
+                <label>Labour Pricing</label>
+                <div class="labour-toggle">
+                    <button id="ltbtn-m2"  onclick="setLabourType('m2')"  class="ltbtn ltbtn-active">£/m²</button>
+                    <button id="ltbtn-day" onclick="setLabourType('day')" class="ltbtn">Day Rate</button>
+                </div>
+            </div>
+            <div id="labour-day-opts" class="hidden" style="margin-top:10px;">
+                <div class="field-row" style="margin-bottom:0;">
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Days</label>
+                        <input id="rm-days" type="number" step="0.5" min="0.5" placeholder="e.g. 2" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Day Rate (£)</label>
+                        <input id="rm-dayrate" type="number" step="10" oninput="rmCalc()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section-label" style="margin-bottom:10px;">What are you tiling?</div>
+        <div class="stype-row">
+            <button id="stype-btn-room"  onclick="rmSelectType('room')"  class="stype-btn stype-room">🏠<br><span>Full Room</span></button>
+            <button id="stype-btn-floor" onclick="rmSelectType('floor')" class="stype-btn">⬜<br><span>Floor only</span></button>
+            <button id="stype-btn-wall"  onclick="rmSelectType('wall')"  class="stype-btn">🧱<br><span>Wall only</span></button>
+        </div>
+
+        <!-- DEDUCTIONS CARD -->
+        <div id="rm-deduct-card" class="form-card" style="margin-bottom:14px;padding:14px 16px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px;">
+                Deductions
+                <span id="deduct-total-badge" style="background:#c00;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:8px;display:none;"></span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;">
+                <label class="deduct-chip"><input type="checkbox" value="door"     onchange="toggleDeductChip(this,1.9,0.7,'Door')">     🚪 Door<br><small>1.9×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathwall" onchange="toggleDeductChip(this,1.7,0.6,'Bath Wall')"> 🛁 Bath Wall<br><small>1.7×0.6m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend1" onchange="toggleDeductChip(this,0.7,0.7,'Bath End')">  🛁 Bath End<br><small>0.7×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend2" onchange="toggleDeductChip(this,0.7,0.7,'Bath End 2')">🛁 Bath End 2<br><small>0.7×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathfloor" onchange="toggleDeductChip(this,1.7,0.7,'Bath Floor','floor')">🛁 Bath Floor<br><small>1.7×0.7m</small></label>
+                <label class="deduct-chip deduct-chip-manual" onclick="addManualDeduct()">✏ Manual<br><small>custom</small></label>
+            </div>
+            <div id="deduct-manual-items" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;"></div>
+            <div id="deduct-total-line" style="display:none;margin-top:8px;font-size:12px;color:#c00;font-weight:600;"></div>
+            <input id="rm-r-deduct" type="hidden" value="0">
+            <input id="rm-r-fdeduct" type="hidden" value="0">
+        </div>
+
+        <!-- FULL ROOM -->
+        <div id="rm-form-room" class="measure-form">
+            <div class="form-section-label">Room Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Length (m)</label>
+                    <input id="rm-r-length" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-r-width" type="number" step="0.01" placeholder="e.g. 2.2" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Wall Height (m)</label>
+                <input id="rm-r-height" type="number" step="0.01" placeholder="e.g. 2.4" oninput="rmCalc()">
+            </div>
+            <div class="divider-label">Wall Tiles</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-r-wtilew" type="number" value="300" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-r-wtileh" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-r-wtilethick" type="number" value="8" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Wall Grout Joint (mm)</label>
+                <input id="rm-r-wgrout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            <div class="divider-label">Floor</div>
+            <label class="checkbox-label" style="margin-bottom:10px;">
+                <input type="checkbox" id="rm-r-inclfloor" checked onchange="rmToggleFloor()">
+                Include floor
+            </label>
+            <div id="rm-r-floor-opts">
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Floor Tile W (mm)</label>
+                        <input id="rm-r-ftilew" type="number" value="600" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group">
+                        <label>Floor Tile H (mm)</label>
+                        <input id="rm-r-ftileh" type="number" value="600" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group">
+                        <label>Tile Thickness (mm)</label>
+                        <input id="rm-r-ftilethick" type="number" value="10" oninput="rmCalc()">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label>Floor Grout Joint (mm)</label>
+                    <input id="rm-r-fgrout" type="number" value="2" oninput="rmCalc()">
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="rm-r-ufh" onchange="rmCalc()">
+                    Underfloor Heating (UFH)
+                </label>
+                <div class="field-group" style="margin-top:8px;">
+                    <label>Floor Deductions</label>
+                    <div class="deduct-presets">
+                        <button type="button" class="deduct-btn" onclick="addDeduct(1.7,0.7,'Bath Floor','floor')">🛁 Bath Floor<br><span>1.7×0.7m</span></button>
+                        <button type="button" class="deduct-btn deduct-btn-wide" onclick="addDeduct(0,0,'Manual','floor-manual')">✏ Manual</button>
+                    </div>
+                    <div id="deduct-floor-items" class="deduct-items"></div>
+                    <input id="rm-r-fdeduct" type="hidden" value="0">
+                </div>
+                <div class="divider-label">Floor Preparation</div>
+                <div class="prep-options">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-cementboard" onchange="rmCalc()">
+                        <div class="prep-text"><span>Cement Board</span><span class="prep-cost">+£<span class="pc-cb"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-membrane" onchange="rmCalc()">
+                        <div class="prep-text"><span>Anti-Crack Membrane</span><span class="prep-cost">+£<span class="pc-mem"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-levelling" onchange="rmToggleLevelR()">
+                        <div class="prep-text"><span>Levelling Compound</span><span class="prep-cost">+£<span class="pc-lev-r"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-level-depth" class="prep-depth hidden">
+                        <label>Depth</label>
+                        <select id="rm-r-leveldepth" onchange="rmCalc()">
+                            <option value="2">2 mm</option>
+                            <option value="3">3 mm</option>
+                            <option value="4">4 mm</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WALL PREP for full room -->
+        <div class="measure-form" id="rm-r-wallprep-card" style="margin-top:-6px;padding-top:12px;">
+            <div class="divider-label" style="margin-top:0;">Wall Preparation</div>
+            <div class="prep-options">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-r-tanking" onchange="rmCalc()">
+                    <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-r"></span>/m²</span></div>
+                </label>
+            </div>
+        </div>
+
+        <!-- FLOOR ONLY -->
+        <div id="rm-form-floor" class="measure-form hidden">
+            <div class="form-section-label">Floor Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Length (m)</label>
+                    <input id="rm-f-length" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-f-width" type="number" step="0.01" placeholder="e.g. 2.2" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="deduct-section">
+                <div class="deduct-section-label">Deductions</div>
+                <div class="deduct-presets">
+                    <button type="button" class="deduct-btn" onclick="addDeduct(1.7,0.7,'Bath Floor','floor')">🛁 Bath Floor<br><span>1.7×0.7m</span></button>
+                    <button type="button" class="deduct-btn deduct-btn-wide" onclick="addDeduct(0,0,'Opening','floor-manual')">✏ Manual</button>
+                </div>
+                <div id="deduct-floor-items-f" class="deduct-items"></div>
+                <input id="rm-f-deduct" type="hidden" value="0">
+            </div>
+            <div class="divider-label">Tile</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-f-tilew" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-f-tileh" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-f-tilethick" type="number" value="10" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Grout Joint (mm)</label>
+                <input id="rm-f-grout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            <label class="checkbox-label" style="margin-bottom:4px;">
+                <input type="checkbox" id="rm-f-ufh" onchange="rmCalc()">
+                Underfloor Heating (UFH)
+            </label>
+            <div class="divider-label">Floor Preparation</div>
+            <div class="prep-options">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-cementboard" onchange="rmCalc()">
+                    <div class="prep-text"><span>Cement Board</span><span class="prep-cost">+£<span class="pc-cb"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-membrane" onchange="rmCalc()">
+                    <div class="prep-text"><span>Anti-Crack Membrane</span><span class="prep-cost">+£<span class="pc-mem"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-levelling" onchange="rmToggleLevelF()">
+                    <div class="prep-text"><span>Levelling Compound</span><span class="prep-cost">+£<span class="pc-lev-f"></span>/m²</span></div>
+                </label>
+                <div id="rm-f-level-depth" class="prep-depth hidden">
+                    <label>Depth</label>
+                    <select id="rm-f-leveldepth" onchange="rmCalc()">
+                        <option value="2">2 mm</option>
+                        <option value="3">3 mm</option>
+                        <option value="4">4 mm</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- WALL ONLY -->
+        <div id="rm-form-wall" class="measure-form hidden">
+            <div class="form-section-label">Wall Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-w-width" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Height (m)</label>
+                    <input id="rm-w-height" type="number" step="0.01" placeholder="e.g. 2.4" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="deduct-section">
+                <div class="deduct-section-label">Deductions</div>
+                <div class="deduct-presets">
+                    <button type="button" class="deduct-btn" onclick="addDeduct(1.9,0.7,'Door')">🚪 Door<br><span>1.9×0.7m</span></button>
+                    <button type="button" class="deduct-btn" onclick="addDeduct(1.7,0.6,'Bath Wall')">🛁 Bath Wall<br><span>1.7×0.6m</span></button>
+                    <button type="button" class="deduct-btn" onclick="addDeduct(0.7,0.7,'Bath End')">🛁 Bath End<br><span>0.7×0.7m</span></button>
+                    <button type="button" class="deduct-btn deduct-btn-wide" onclick="addDeduct(0,0,'Opening','manual')">✏ Manual</button>
+                </div>
+                <div id="deduct-wall-items-w" class="deduct-items"></div>
+                <input id="rm-w-deduct" type="hidden" value="0">
+            </div>
+            <div class="divider-label">Tile</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-w-tilew" type="number" value="300" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-w-tileh" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-w-tilethick" type="number" value="8" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Grout Joint (mm)</label>
+                <input id="rm-w-grout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            <div class="divider-label">Wall Preparation</div>
+            <div class="prep-options">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-tanking" onchange="rmCalc()">
+                    <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-w"></span>/m²</span></div>
+                </label>
+            </div>
+        </div>
+
+        <div class="live-total-card">
+            <div class="live-total-label">Estimated Room Total <span id="rm-area" class="live-total-m2"></span></div>
+            <div class="live-total-value">£<span id="rm-total">0.00</span></div>
+            <div id="rm-breakdown" class="total-breakdown"></div>
+        </div>
+
+        <div class="form-actions" style="margin-top:14px;">
+            <button onclick="goJob()" class="btn-secondary">Cancel</button>
+            <button onclick="saveRoom()" class="btn-primary">Save Room</button>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Back</button>
+        <h2 class="header-title">Settings</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Material Costs</div>
+            <div class="field-row">
+                <div class="field-group"><label>Tile Price (£/m²)</label><input id="set-tile-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Grout (per kg) £</label><input id="set-grout-price" type="number" step="0.01"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Adhesive (per bag) £</label><input id="set-adhesive-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Silicone (per tube) £</label><input id="set-silicone-price" type="number" step="0.01"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Pricing</div>
+            <div class="field-row">
+                <div class="field-group"><label>Material Markup (%)</label><input id="set-markup" type="number"></div>
+                <div class="field-group"><label>Markup Labour too?</label>
+                    <select id="set-labour-markup"><option value="false">No</option><option value="true">Yes</option></select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Labour Rate (£/m²)</label><input id="set-labour-m2" type="number" step="0.5"></div>
+                <div class="field-group"><label>Day Rate (£/day)</label><input id="set-day-rate" type="number"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Preparation Costs (£/m²)</div>
+            <div class="field-row">
+                <div class="field-group"><label>Cement Board</label><input id="set-cementboard" type="number" step="0.50"></div>
+                <div class="field-group"><label>Anti-Crack Membrane</label><input id="set-membrane" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Levelling 2mm</label><input id="set-level2" type="number" step="0.50"></div>
+                <div class="field-group"><label>Levelling 3mm</label><input id="set-level3" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Levelling 4mm</label><input id="set-level4" type="number" step="0.50"></div>
+                <div class="field-group"><label>Tanking (per m²)</label><input id="set-tanking" type="number" step="0.50"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">VAT</div>
+            <div class="field-group"><label>Apply VAT by default?</label>
+                <select id="set-vat"><option value="true">Yes – 20%</option><option value="false">No</option></select>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Your Company</div>
+            <div class="field-group"><label>Company Name</label><input id="set-company-name" placeholder="Your Tiling Co."></div>
+            <div class="field-row">
+                <div class="field-group"><label>Phone</label><input id="set-company-phone"></div>
+                <div class="field-group"><label>Email</label><input id="set-company-email"></div>
+            </div>
+            <div class="field-group"><label>Quote Terms</label>
+                <textarea id="set-terms" rows="3" placeholder="e.g. Payment due within 14 days…"></textarea>
+            </div>
+            <div class="form-actions">
+                <button onclick="goDashboard()" class="btn-secondary">Cancel</button>
+                <button onclick="saveSettings()" class="btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QUOTE -->
+<div id="screen-quote" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Quote</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card" style="margin-bottom:14px;">
+            <div class="field-row">
+                <div class="field-group"><label>Apply VAT?</label>
+                    <select id="q-vat" onchange="renderQuote()"><option value="true">Yes – 20%</option><option value="false">No</option></select>
+                </div>
+                <div class="field-group"><label>Valid for (days)</label>
+                    <input id="q-expiry" type="number" value="30" onchange="renderQuote()">
+                </div>
+            </div>
+        </div>
+        <div id="quote-output" class="quote-preview-box"></div>
+        <div class="ai-section">
+            <div class="form-section-label">AI Description</div>
+            <div class="field-row">
+                <div class="field-group"><label>Style</label>
+                    <select id="ai-style">
+                        <option value="professional">Professional</option>
+                        <option value="labour">Labour Focused</option>
+                        <option value="materials">Materials</option>
+                        <option value="fixing">Fixing Method</option>
+                        <option value="subfloor">Subfloor Prep</option>
+                        <option value="sales">Customer Friendly</option>
+                    </select>
+                </div>
+                <div class="field-group" style="display:flex;align-items:flex-end;">
+                    <button onclick="generateAI()" class="btn-primary" style="width:100%">✨ Generate</button>
+                </div>
+            </div>
+            <div id="ai-box"></div>
+        </div>
+        <div class="action-row">
+            <button onclick="exportCSV()" class="btn-secondary">📊 CSV</button>
+            <button onclick="downloadPDF()" class="btn-primary">📄 PDF</button>
+        </div>
+        <button onclick="exportFreeAgent()" class="btn-secondary" style="width:100%;margin-top:8px;">🔗 FreeAgent Export</button>
+    </div>
+</div>
+
+</div>
+<script>
+/* ================================================================
+   TileIQ Pro – script.js  (clean rewrite)
+   Flow: Dashboard → New Job (customer details) → Job View (rooms)
+         → Room Editor (floor / wall / both) → Quote
+   ================================================================ */
+
+/* ─── STATE ─────────────────────────────────────────────────── */
+let jobs     = JSON.parse(localStorage.getItem("tileiq-jobs"))     || [];
+let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
+    tilePrice:     25.00,
+    groutPrice:    4.50,
+    adhesivePrice: 22,
+    siliconePrice: 6.50,
+    markup:        20,
+    labourMarkup:  false,
+    labourM2:      32,
+    labourM2Wall:  35,
+    labourM2Floor: 28,
+    dayRate:       200,
+    applyVat:      true,
+    // prep costs £/m²
+    cementBoard:   18,
+    membrane:       8,
+    level2:         5,
+    level3:         7,
+    level4:         9,
+    tanking:        15,
+    companyName:   "",
+    companyPhone:  "",
+    companyEmail:  "",
+    terms: "Payment due within 14 days of invoice. All works guaranteed for 12 months against defects in workmanship."
+};
+
+let currentJobId    = null;   // id of job currently open
+let currentRoomIdx  = null;   // null = new room, number = editing existing
+let currentSurfType   = "room";  // "room" | "floor" | "wall"
+let currentLabourType = "m2";    // "m2" | "day"
+
+/* ─── HELPERS ────────────────────────────────────────────────── */
+function show(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
+    document.getElementById(id).classList.remove("hidden");
+    window.scrollTo(0, 0);
+}
+
+function getJob()  { return jobs.find(j => j.id === currentJobId); }
+function saveAll() { localStorage.setItem("tileiq-jobs", JSON.stringify(jobs)); }
+function esc(s)    { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function uid()     { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function statusBadge(s) {
+    const map = { enquiry:"badge-enquiry", quoted:"badge-quoted", accepted:"badge-accepted", complete:"badge-complete" };
+    const labels = { enquiry:"Enquiry", quoted:"Quoted", accepted:"Accepted", complete:"Complete" };
+    return `<span class="status-badge ${map[s]||''}">${labels[s]||s}</span>`;
+}
+
+/* ─── BOOT ───────────────────────────────────────────────────── */
+setTimeout(() => { show("screen-dashboard"); renderDashboard(); updatePrepPriceBadges(); }, 800);
+
+/* Fill in the £/m² cost hints on all prep option labels */
+function updatePrepPriceBadges() {
+    const S = settings;
+    document.querySelectorAll(".pc-cb").forEach(el   => el.textContent = S.cementBoard);
+    document.querySelectorAll(".pc-mem").forEach(el  => el.textContent = S.membrane);
+    document.querySelectorAll(".pc-tank-r, .pc-tank-w").forEach(el => el.textContent = S.tanking);
+    updateLevelBadge("rm-r-leveldepth", ".pc-lev-r");
+    updateLevelBadge("rm-f-leveldepth", ".pc-lev-f");
+}
+
+function updateLevelBadge(selectId, cls) {
+    const el = document.getElementById(selectId);
+    const depth = el ? el.value : "2";
+    const cost  = depth === "2" ? settings.level2 : depth === "3" ? settings.level3 : settings.level4;
+    document.querySelectorAll(cls).forEach(el => el.textContent = cost);
+}
+
+function rmToggleLevelR() {
+    const checked = document.getElementById("rm-r-levelling").checked;
+    document.getElementById("rm-r-level-depth").classList.toggle("hidden", !checked);
+    rmCalc();
+}
+function rmToggleLevelF() {
+    const checked = document.getElementById("rm-f-levelling").checked;
+    document.getElementById("rm-f-level-depth").classList.toggle("hidden", !checked);
+    rmCalc();
+}
+
+/* ================================================================
+   DASHBOARD
+================================================================ */
+function goDashboard() { show("screen-dashboard"); renderDashboard(); }
+
+function renderDashboard() {
+    const list  = document.getElementById("jobs-list");
+    const empty = document.getElementById("jobs-empty");
+    document.getElementById("job-count").textContent = jobs.length;
+
+    if (!jobs.length) { list.innerHTML = ""; empty.classList.remove("hidden"); return; }
+    empty.classList.add("hidden");
+
+    list.innerHTML = jobs.map(j => {
+        const total = (j.rooms || []).reduce((a, r) => a + parseFloat(r.total || 0), 0);
+        const count = (j.rooms || []).length;
+        return `
+        <div class="job-card" onclick="goJob('${j.id}')">
+            <div class="job-card-header">
+                <div>
+                    <div class="job-card-name">${esc(j.customerName)}</div>
+                    <div class="job-card-sub">${esc(j.description || j.address || "")}</div>
+                </div>
+                ${statusBadge(j.status)}
+            </div>
+            <div class="job-card-footer">
+                <span>${count} room${count !== 1 ? "s" : ""}</span>
+                <span class="job-card-total">£${total.toFixed(2)}</span>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+/* ================================================================
+   NEW JOB
+================================================================ */
+function goNewJob() {
+    ["nj-name","nj-phone","nj-email","nj-address","nj-city","nj-postcode","nj-desc"]
+        .forEach(id => document.getElementById(id).value = "");
+    document.getElementById("nj-status").value = "enquiry";
+    document.getElementById("nj-supply").value = "contractor";
+    show("screen-new-job");
+    setTimeout(() => document.getElementById("nj-name").focus(), 100);
+}
+
+function createJob() {
+    const name = document.getElementById("nj-name").value.trim();
+    if (!name) { alert("Please enter the customer name."); return; }
+
+    const job = {
+        id:           uid(),
+        customerName: name,
+        phone:        document.getElementById("nj-phone").value.trim(),
+        email:        document.getElementById("nj-email").value.trim(),
+        address:      document.getElementById("nj-address").value.trim(),
+        city:         document.getElementById("nj-city").value.trim(),
+        postcode:     document.getElementById("nj-postcode").value.trim(),
+        description:  document.getElementById("nj-desc").value.trim(),
+        status:       document.getElementById("nj-status").value,
+        tileSupply:   document.getElementById("nj-supply").value,
+        rooms:        [],
+        createdAt:    new Date().toISOString()
+    };
+
+    jobs.push(job);
+    saveAll();
+    currentJobId = job.id;
+    renderJobView();
+    show("screen-job");
+}
+
+/* ================================================================
+   JOB VIEW
+================================================================ */
+function goJob(id) {
+    if (id) currentJobId = id;
+    renderJobView();
+    show("screen-job");
+}
+
+function renderJobView() {
+    const job = getJob();
+    if (!job) { goDashboard(); return; }
+
+    document.getElementById("job-header-title").textContent = job.customerName;
+
+    // Customer bar
+    const parts = [job.address, job.city, job.postcode].filter(Boolean).join(", ");
+    document.getElementById("job-customer-bar").innerHTML = `
+        <div class="cbar-name">${esc(job.customerName)} ${statusBadge(job.status)}</div>
+        ${parts ? `<div class="cbar-address">${esc(parts)}</div>` : ""}
+        ${job.phone ? `<span class="cbar-contact">📞 ${esc(job.phone)}</span>` : ""}
+        ${job.email ? `<span class="cbar-contact">✉ ${esc(job.email)}</span>` : ""}
+        ${job.tileSupply === "customer" ? `<span class="cbar-badge">👤 Customer tiles</span>` : ""}
+    `;
+
+    // Rooms
+    const roomsEl  = document.getElementById("job-rooms-list");
+    const emptyEl  = document.getElementById("job-rooms-empty");
+    const totalEl  = document.getElementById("job-running-total");
+    const rooms    = job.rooms || [];
+
+    if (!rooms.length) {
+        roomsEl.innerHTML = "";
+        emptyEl.style.display = "";
+        totalEl.classList.add("hidden");
+        return;
+    }
+
+    emptyEl.style.display = "none";
+
+    roomsEl.innerHTML = rooms.map((r, i) => {
+        const surfaces = r.surfaces || [];
+
+        // Recalc so materialSell/labour/prepCost are always fresh
+        const rCt = r.tileSupply === "customer";
+        const rArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+        let rLabOpts = null;
+        if (r.labourType === "day") rLabOpts = { type:"day", days: r.days||1, dayRate: r.dayRate||settings.dayRate||200, totalArea:rArea };
+        surfaces.forEach(s => calcSurface(s, rCt, rLabOpts));
+
+        const wallM2  = surfaces.filter(s => s.type === "wall").reduce((a, s) => a + (s.area || 0), 0);
+        const floorM2 = surfaces.filter(s => s.type === "floor").reduce((a, s) => a + (s.area || 0), 0);
+        const areaParts = [];
+        if (wallM2  > 0) areaParts.push(`🧱 ${wallM2.toFixed(2)} m²`);
+        if (floorM2 > 0) areaParts.push(`⬜ ${floorM2.toFixed(2)} m²`);
+        const areaStr = areaParts.join(" · ") || `${(r.area||0).toFixed(2)} m²`;
+
+        const surfLines = surfaces.map(s => {
+            const icon = s.type === "floor" ? "⬜" : "🧱";
+            const dim  = s.type === "floor"
+                ? `${s.length}×${s.width}m`
+                : `${s.width}×${s.height}m`;
+            return `<span class="surf-chip">${icon} ${esc(s.label)} ${dim} · £${s.total}</span>`;
+        }).join("");
+
+        const mats       = surfaces.reduce((a, s) => a + (s.materialSell  || 0), 0);
+        const lab        = surfaces.reduce((a, s) => a + (s.labour        || 0), 0);
+        const prep       = surfaces.reduce((a, s) => a + (s.prepCost      || 0), 0);
+        const ufh        = surfaces.reduce((a, s) => a + (s.ufhCost       || 0), 0);
+        const adhBags    = surfaces.reduce((a, s) => a + (s.adhBags       || 0), 0);
+        const groutBags  = surfaces.reduce((a, s) => a + (s.groutBags     || 0), 0);
+        const groutKg    = surfaces.reduce((a, s) => a + (s.groutKg       || 0), 0);
+        const cbBoards   = surfaces.reduce((a, s) => a + (s.cementBoards  || 0), 0);
+        const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
+
+        const matSchedule = [
+            adhBags  > 0 ? `Adhesive: ${adhBags} × 20kg`                                            : "",
+            groutBags> 0 ? `Grout: ${groutBags} × 2.5kg (${parseFloat(groutKg.toFixed(1))}kg)`      : "",
+            cbBoards > 0 ? `Cement Board: ${cbBoards} board${cbBoards !== 1 ? "s" : ""}`            : "",
+            levelBags> 0 ? `Levelling: ${levelBags} × 20kg`                                         : "",
+        ].filter(Boolean).join("  ·  ");
+
+        return `
+        <div class="room-card">
+            <div class="room-card-header">
+                <div>
+                    <div class="room-card-name">${esc(r.name)}</div>
+                    <div class="room-card-meta">${areaStr}</div>
+                </div>
+                <div class="room-card-total">£${r.total}</div>
+            </div>
+            <div class="room-cost-breakdown">
+                <span class="rcb-item"><span class="rcb-label">Materials</span><span class="rcb-value">£${mats.toFixed(2)}</span></span>
+                <span class="rcb-sep">|</span>
+                <span class="rcb-item"><span class="rcb-label">Labour</span><span class="rcb-value">£${lab.toFixed(2)}</span></span>
+                ${prep > 0 ? `<span class="rcb-sep">|</span><span class="rcb-item"><span class="rcb-label">Prep</span><span class="rcb-value">£${prep.toFixed(2)}</span></span>` : ""}
+                ${ufh  > 0 ? `<span class="rcb-sep">|</span><span class="rcb-item"><span class="rcb-label">UFH</span><span class="rcb-value">£${ufh.toFixed(2)}</span></span>` : ""}
+            </div>
+            ${matSchedule ? `<div class="room-mat-schedule">${matSchedule}</div>` : ""}
+            ${surfLines ? `<div class="surf-chips">${surfLines}</div>` : ""}
+            <div class="room-card-actions">
+                <button onclick="goEditRoom(${i})" class="btn-secondary btn-sm">✏ Edit</button>
+                <button onclick="deleteRoom(${i})" class="btn-secondary btn-sm">🗑 Delete</button>
+            </div>
+        </div>`;
+    }).join("");
+
+    const grandTotal = rooms.reduce((a, r) => a + parseFloat(r.total || 0), 0);
+    totalEl.classList.remove("hidden");
+    totalEl.innerHTML = `<span>Job Total</span><strong>£${grandTotal.toFixed(2)}</strong>`;
+}
+
+function deleteRoom(idx) {
+    if (!confirm("Delete this room?")) return;
+    getJob().rooms.splice(idx, 1);
+    saveAll();
+    renderJobView();
+}
+
+function deleteJob() {
+    const job = getJob();
+    if (!confirm(`Delete job for ${job.customerName}? This cannot be undone.`)) return;
+    jobs = jobs.filter(j => j.id !== currentJobId);
+    currentJobId = null;
+    saveAll();
+    goDashboard();
+}
+
+/* ================================================================
+   EDIT JOB
+================================================================ */
+function goEditJob() {
+    const j = getJob();
+    document.getElementById("ej-name").value    = j.customerName || "";
+    document.getElementById("ej-phone").value   = j.phone        || "";
+    document.getElementById("ej-email").value   = j.email        || "";
+    document.getElementById("ej-address").value = j.address      || "";
+    document.getElementById("ej-city").value    = j.city         || "";
+    document.getElementById("ej-postcode").value= j.postcode     || "";
+    document.getElementById("ej-desc").value    = j.description  || "";
+    document.getElementById("ej-status").value  = j.status       || "enquiry";
+    document.getElementById("ej-supply").value  = j.tileSupply   || "contractor";
+    show("screen-edit-job");
+}
+
+function saveEditJob() {
+    const name = document.getElementById("ej-name").value.trim();
+    if (!name) { alert("Customer name is required."); return; }
+    const j = getJob();
+    j.customerName = name;
+    j.phone        = document.getElementById("ej-phone").value.trim();
+    j.email        = document.getElementById("ej-email").value.trim();
+    j.address      = document.getElementById("ej-address").value.trim();
+    j.city         = document.getElementById("ej-city").value.trim();
+    j.postcode     = document.getElementById("ej-postcode").value.trim();
+    j.description  = document.getElementById("ej-desc").value.trim();
+    j.status       = document.getElementById("ej-status").value;
+    j.tileSupply   = document.getElementById("ej-supply").value;
+    saveAll();
+    goJob();
+}
+
+/* ================================================================
+   ROOM EDITOR
+================================================================ */
+function setLabourType(type) {
+    currentLabourType = type;
+    document.getElementById("ltbtn-m2").classList.toggle("ltbtn-active",  type === "m2");
+    document.getElementById("ltbtn-day").classList.toggle("ltbtn-active", type === "day");
+    document.getElementById("labour-day-opts").classList.toggle("hidden", type !== "day");
+    rmCalc();
+}
+
+function goAddRoom() {
+    currentRoomIdx    = null;
+    currentSurfType   = "room";
+    currentLabourType = "m2";
+    document.getElementById("room-screen-title").textContent = "Add Room";
+    document.getElementById("rm-name").value = "";
+    document.getElementById("rm-customer-tiles").checked = false;
+    document.getElementById("rm-dayrate").value = settings.dayRate || 200;
+    document.getElementById("rm-days").value = "";
+    clearRoomInputs();
+    setLabourType("m2");
+    rmSelectType("room");
+    show("screen-room");
+    setTimeout(() => document.getElementById("rm-name").focus(), 100);
+}
+
+function goEditRoom(idx) {
+    const room = getJob().rooms[idx];
+    currentRoomIdx    = idx;
+    currentSurfType   = room.savedType || "room";
+    currentLabourType = room.labourType || "m2";
+
+    document.getElementById("room-screen-title").textContent = "Edit Room";
+    document.getElementById("rm-name").value = room.name;
+    document.getElementById("rm-customer-tiles").checked = room.tileSupply === "customer";
+    document.getElementById("rm-dayrate").value = room.dayRate || settings.dayRate || 200;
+    document.getElementById("rm-days").value    = room.days || "";
+
+    clearRoomInputs();
+    setLabourType(currentLabourType);
+    rmSelectType(currentSurfType);
+    restoreRoomInputs(room);
+    // Restore saved deductions
+    wallDeducts  = (room.wallDeducts  || []).slice();
+    floorDeducts = (room.floorDeducts || []).slice();
+    renderDeducts();
+    rmCalc();
+    show("screen-room");
+}
+
+/* Show the right measurement form, highlight the right button */
+function rmSelectType(type) {
+    currentSurfType = type;
+    ["room","floor","wall"].forEach(t => {
+        document.getElementById("rm-form-" + t).classList.toggle("hidden", t !== type);
+        document.getElementById("stype-btn-" + t).classList.toggle("stype-active", t === type);
+    });
+    // Show/hide the wall deduction card (room mode only)
+    const dc = document.getElementById("rm-deduct-card");
+    if (dc) dc.classList.toggle("hidden", type !== "room");
+    rmCalc();
+}
+
+function rmToggleFloor() {
+    const show = document.getElementById("rm-r-inclfloor").checked;
+    document.getElementById("rm-r-floor-opts").style.display = show ? "" : "none";
+    rmCalc();
+}
+
+/* Wipe all measurement fields */
+function clearRoomInputs() {
+    clearDeducts();
+    const ids = [
+        "rm-r-length","rm-r-width","rm-r-height","rm-r-deduct",
+        "rm-f-length","rm-f-width",
+        "rm-w-width","rm-w-height"
+    ];
+    ids.forEach(id => document.getElementById(id).value = "");
+    document.getElementById("rm-r-inclfloor").checked = true;
+    document.getElementById("rm-r-ufh").checked       = false;
+    document.getElementById("rm-f-ufh").checked       = false;
+    document.getElementById("rm-r-floor-opts").style.display = "";
+    // reset prep checkboxes
+    ["rm-r-cementboard","rm-r-membrane","rm-r-levelling","rm-r-tanking",
+     "rm-f-cementboard","rm-f-membrane","rm-f-levelling",
+     "rm-w-tanking"].forEach(id => {
+        const el = document.getElementById(id); if (el) el.checked = false;
+    });
+    document.getElementById("rm-r-level-depth").classList.add("hidden");
+    document.getElementById("rm-f-level-depth").classList.add("hidden");
+    // reset tile defaults
+    document.getElementById("rm-r-wtilew").value = 300;
+    document.getElementById("rm-r-wtileh").value = 600;
+    document.getElementById("rm-r-wtilethick").value = 8;
+    document.getElementById("rm-r-wgrout").value = 2;
+    document.getElementById("rm-r-ftilew").value = 600;
+    document.getElementById("rm-r-ftileh").value = 600;
+    document.getElementById("rm-r-fgrout").value = 2;
+    document.getElementById("rm-r-deduct").value = 0;
+    document.getElementById("rm-f-tilew").value  = 600;
+    document.getElementById("rm-f-tileh").value  = 600;
+    document.getElementById("rm-f-tilethick").value = 10;
+    document.getElementById("rm-f-grout").value  = 2;
+    document.getElementById("rm-w-tilew").value  = 300;
+    document.getElementById("rm-w-tilethick").value = 8;
+    document.getElementById("rm-w-tileh").value  = 600;
+    document.getElementById("rm-w-grout").value  = 2;
+}
+
+/* Restore fields when editing an existing room */
+function restoreRoomInputs(room) {
+    const surfaces = room.surfaces || [];
+    const walls    = surfaces.filter(s => s.type === "wall");
+    const floors   = surfaces.filter(s => s.type === "floor");
+    const set   = (id, v) => { if (v !== undefined && v !== null) document.getElementById(id).value = v; };
+    const setCb = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+
+    if (currentSurfType === "room") {
+        if (walls.length >= 4) {
+            set("rm-r-length", walls[0].width);
+            set("rm-r-width",  walls[2].width);
+            set("rm-r-height", walls[0].height);
+            set("rm-r-wtilew", walls[0].tileW);
+            set("rm-r-wtileh", walls[0].tileH);
+            set("rm-r-wtilethick", walls[0].tileThick || 8);
+            set("rm-r-wgrout", walls[0].grout);
+            setCb("rm-r-tanking", walls[0].tanking);
+        }
+        if (floors.length) {
+            setCb("rm-r-inclfloor", true);
+            set("rm-r-ftilew", floors[0].tileW);
+            set("rm-r-ftileh", floors[0].tileH);
+            set("rm-r-ftilethick", floors[0].tileThick || 10);
+            set("rm-r-fgrout", floors[0].grout);
+            setCb("rm-r-ufh", floors[0].ufh);
+            setCb("rm-r-cementboard", floors[0].cementBoard);
+            setCb("rm-r-membrane",    floors[0].membrane);
+            setCb("rm-r-levelling",   floors[0].levelling);
+            if (floors[0].levelling) {
+                set("rm-r-leveldepth", floors[0].levelDepth || 2);
+                document.getElementById("rm-r-level-depth").classList.remove("hidden");
+            }
+            document.getElementById("rm-r-floor-opts").style.display = "";
+        } else {
+            setCb("rm-r-inclfloor", false);
+            document.getElementById("rm-r-floor-opts").style.display = "none";
+        }
+    } else if (currentSurfType === "floor" && floors.length) {
+        set("rm-f-length", floors[0].length);
+        set("rm-f-width",  floors[0].width);
+        set("rm-f-tilew",  floors[0].tileW);
+        set("rm-f-tileh",  floors[0].tileH);
+        set("rm-f-tilethick", floors[0].tileThick || 10);
+        set("rm-f-grout",  floors[0].grout);
+        setCb("rm-f-ufh",         floors[0].ufh);
+        setCb("rm-f-cementboard", floors[0].cementBoard);
+        setCb("rm-f-membrane",    floors[0].membrane);
+        setCb("rm-f-levelling",   floors[0].levelling);
+        if (floors[0].levelling) {
+            set("rm-f-leveldepth", floors[0].levelDepth || 2);
+            document.getElementById("rm-f-level-depth").classList.remove("hidden");
+        }
+    } else if (currentSurfType === "wall" && walls.length) {
+        set("rm-w-width",  walls[0].width);
+        set("rm-w-height", walls[0].height);
+        set("rm-w-tilew",  walls[0].tileW);
+        set("rm-w-tileh",  walls[0].tileH);
+        set("rm-w-tilethick", walls[0].tileThick || 8);
+        set("rm-w-grout",  walls[0].grout);
+        setCb("rm-w-tanking", walls[0].tanking);
+    }
+}
+
+/* ─── BUILD SURFACES from current form fields ─── */
+function buildSurfaces() {
+    const g  = id => { const el = document.getElementById(id); return el ? parseFloat(el.value) : NaN; };
+    const cb = id => document.getElementById(id)?.checked || false;
+    const sv = id => document.getElementById(id)?.value   || "2";
+
+    if (currentSurfType === "room") {
+        const L = g("rm-r-length"), W = g("rm-r-width"), H = g("rm-r-height");
+        if (!L || !W || !H || L <= 0 || W <= 0 || H <= 0) return null;
+
+        const deduct      = parseFloat(document.getElementById("rm-r-deduct")?.value) || 0;
+        const floorDeduct = parseFloat(document.getElementById("rm-r-fdeduct")?.value) || 0;
+        const wallTileW     = g("rm-r-wtilew")     || 300;
+        const wallTileH     = g("rm-r-wtileh")     || 600;
+        const wallTileThick = g("rm-r-wtilethick") || 8;
+        const wallGrout     = g("rm-r-wgrout")     || 2;
+        const totalWallArea = 2 * (L + W) * H;
+        const tanking = cb("rm-r-tanking");
+
+        const surfaces = [
+            { label:"Wall A (front)", width:L, height:H },
+            { label:"Wall B (back)",  width:L, height:H },
+            { label:"Wall C (left)",  width:W, height:H },
+            { label:"Wall D (right)", width:W, height:H },
+        ].map(w => ({
+            type:"wall", label:w.label, width:w.width, height:w.height,
+            tileW:wallTileW, tileH:wallTileH, tileThick:wallTileThick, grout:wallGrout,
+            tanking,
+            area: Math.max(0, w.width * w.height - deduct * (w.width * w.height / totalWallArea))
+        }));
+
+        if (cb("rm-r-inclfloor")) {
+            surfaces.push({
+                type:"floor", label:"Floor", length:L, width:W,
+                tileW:   g("rm-r-ftilew") || 600,
+                tileH:   g("rm-r-ftileh") || 600,
+                tileThick: g("rm-r-ftilethick") || 10,
+                grout:   g("rm-r-fgrout") || 2,
+                ufh:     cb("rm-r-ufh"),
+                cementBoard: cb("rm-r-cementboard"),
+                membrane:    cb("rm-r-membrane"),
+                levelling:   cb("rm-r-levelling"),
+                levelDepth:  parseInt(sv("rm-r-leveldepth")) || 2,
+                area: Math.max(0, L * W - floorDeduct)
+            });
+        }
+        return surfaces;
+    }
+
+    if (currentSurfType === "floor") {
+        const L = g("rm-f-length"), W = g("rm-f-width");
+        if (!L || !W || L <= 0 || W <= 0) return null;
+        const fDed = parseFloat(document.getElementById("rm-f-deduct")?.value) || 0;
+        return [{ type:"floor", label:"Floor", length:L, width:W,
+            tileW:   g("rm-f-tilew") || 600,
+            tileH:   g("rm-f-tileh") || 600,
+            tileThick: g("rm-f-tilethick") || 10,
+            grout:   g("rm-f-grout") || 2,
+            ufh:     cb("rm-f-ufh"),
+            cementBoard: cb("rm-f-cementboard"),
+            membrane:    cb("rm-f-membrane"),
+            levelling:   cb("rm-f-levelling"),
+            levelDepth:  parseInt(sv("rm-f-leveldepth")) || 2,
+            area: Math.max(0, L * W - fDed)
+        }];
+    }
+
+    if (currentSurfType === "wall") {
+        const W = g("rm-w-width"), H = g("rm-w-height");
+        if (!W || !H || W <= 0 || H <= 0) return null;
+        const wDed = parseFloat(document.getElementById("rm-w-deduct")?.value) || 0;
+        return [{ type:"wall", label:"Wall",
+            width:W, height:H,
+            tileW:   g("rm-w-tilew") || 300,
+            tileH:   g("rm-w-tileh") || 600,
+            tileThick: g("rm-w-tilethick") || 8,
+            grout:   g("rm-w-grout") || 2,
+            tanking: cb("rm-w-tanking"),
+            area:    Math.max(0, W * H - wDed)
+        }];
+    }
+
+    return null;
+}
+
+/* ─── COST CALCULATION for a single surface ─── */
+function calcSurface(s, customerTiles, labourOpts) {
+    const S = settings;
+
+    // Ensure area is always a number (guards against string values from localStorage)
+    s.area = parseFloat(s.area) || 0;
+
+    const tileArea = (s.tileW / 1000) * (s.tileH / 1000);
+
+    // Waste factor: walls 12%, floors 10%
+    const wasteFactor = s.type === "wall" ? 1.12 : 1.10;
+    s.tiles = Math.ceil((s.area / tileArea) * wasteFactor);
+
+    // Adhesive: based on tile size category (from BAL/Weber data sheets)
+    const maxDim = Math.max(s.tileW, s.tileH);
+    let adhKgM2;
+    // Midpoint of published usage ranges (Topps Tiles / BAL)
+    // Large format gets +17.5% for mandatory back buttering
+    if      (maxDim < 100)  { adhKgM2 = 3.0; s.adhNotch = "4mm";    s.adhCat = "Mosaic / Small (<100mm)";        s.backButter = false; }
+    else if (maxDim <= 300) { adhKgM2 = 4.0; s.adhNotch = "6mm";    s.adhCat = "Standard Wall (up to 300mm)";    s.backButter = false; }
+    else if (maxDim <= 600) { adhKgM2 = 5.75; s.adhNotch = "10mm";  s.adhCat = "Standard Floor (300–600mm)";     s.backButter = false; }
+    else                    { adhKgM2 = 7.0 * 1.175; s.adhNotch = "12mm+"; s.adhCat = "Large Format (>600mm) inc. back-butter"; s.backButter = true; }
+    s.adhKgM2 = adhKgM2;
+    s.adhBags = Math.ceil((s.area * adhKgM2) / 20);
+
+    // Grout formula:
+    // A = tileW + tileH
+    // B = jointWidth × tileThickness
+    // C = A × B × 1.2
+    // D = tileW × tileH
+    // Rate (kg/m²) = C / D
+    // Total = Rate × area
+    const groutMm   = s.grout     || 2;
+    const tileThick = s.tileThick || (s.type === "floor" ? 10 : 8);
+    const A         = s.tileW + s.tileH;
+    const B         = groutMm * tileThick;
+    const C         = A * B * 1.2;
+    const D         = s.tileW * s.tileH;
+    const groutKgM2 = C / D;
+    s.groutKg   = Math.ceil(groutKgM2 * s.area * 10) / 10;
+    // Grout sold in 2.5kg bags
+    s.groutBags = Math.ceil(s.groutKg / 2.5);
+
+    const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
+    // Price grout by bag quantity
+    const groutCost = s.groutBags * 2.5 * S.groutPrice;
+    const matRaw   = tileCost + groutCost + s.adhBags * S.adhesivePrice;
+    const mult     = 1 + S.markup / 100;
+    s.materialSell = matRaw * mult;
+
+    // Labour: separate wall/floor rates
+    const labourRate = s.type === "wall"
+        ? (S.labourM2Wall || S.labourM2 || 35)
+        : (S.labourM2Floor || S.labourM2 || 28);
+
+    if (labourOpts && labourOpts.type === "day") {
+        const totalArea  = labourOpts.totalArea || 1;
+        const proportion = totalArea > 0 ? s.area / totalArea : 0;
+        const labRaw     = labourOpts.days * labourOpts.dayRate * proportion;
+        s.labour = S.labourMarkup ? labRaw * mult : labRaw;
+    } else {
+        const labRaw = s.area * labourRate;
+        s.labour = S.labourMarkup ? labRaw * mult : labRaw;
+    }
+
+    s.ufhCost = (s.ufh && s.type === "floor") ? s.area * 52 + 180 : 0;
+
+    // Prep costs — all rates are £/m², multiplied by surface area
+    s.prepCost = 0;
+    s.prepLines = [];
+    if (s.type === "floor") {
+        if (s.cementBoard) {
+            const rate   = parseFloat(S.cementBoard) || 18;
+            const boards = Math.ceil(s.area / 0.96);  // 0.96m² per board
+            const c      = s.area * rate;
+            s.cementBoards = boards;
+            s.prepCost += c; s.prepLines.push(`Cement Board: ${boards} board${boards !== 1 ? "s" : ""} (${s.area.toFixed(2)}m² ÷ 0.96m²/board) = £${c.toFixed(2)}`);
+        }
+        if (s.membrane) {
+            const rate = parseFloat(S.membrane) || 8;
+            const c    = s.area * rate;
+            s.prepCost += c; s.prepLines.push(`Anti-Crack Membrane: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+        }
+        if (s.levelling) {
+            const depth  = s.levelDepth || 2;
+            const rate   = depth === 3 ? (parseFloat(S.level3) || 7)
+                         : depth === 4 ? (parseFloat(S.level4) || 9)
+                         :               (parseFloat(S.level2) || 5);
+            const bags   = Math.ceil(s.area / (20 / (depth * 1.5)));  // ~1.5kg covers 1m² at 1mm depth
+            const c      = s.area * rate;
+            s.levelBags  = bags;
+            s.prepCost += c; s.prepLines.push(`Levelling Compound ${depth}mm: ${bags} bag${bags !== 1 ? "s" : ""} × 20kg = £${c.toFixed(2)}`);
+        }
+    }
+    if (s.type === "wall" && s.tanking) {
+        const rate = parseFloat(S.tanking) || 15;
+        const c    = s.area * rate;
+        s.prepCost += c; s.prepLines.push(`Tanking: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+    }
+
+    s.total = (s.materialSell + s.labour + s.ufhCost + s.prepCost).toFixed(2);
+}
+
+/* ─── DEDUCTION PRESETS ─── */
+// Checkbox-driven: preset chips + manual list
+let manualDeducts = [];  // { label, w, h, m2, isFloor }
+
+function toggleDeductChip(cb, w, h, label, mode) {
+    // checked = add, unchecked = remove (handled by recalculating from all checked boxes)
+    updateDeductTotals();
+    rmCalc();
+}
+
+function addManualDeduct() {
+    const label = prompt("Description (e.g. Window):", "Window");
+    if (!label) return;
+    const wStr = prompt("Width (m):", "");
+    const hStr = prompt("Height (m):", "");
+    if (!wStr || !hStr) return;
+    const w = parseFloat(wStr) || 0;
+    const h = parseFloat(hStr) || 0;
+    const m2 = parseFloat((w * h).toFixed(3));
+    if (m2 <= 0) return;
+    manualDeducts.push({ label, w, h, m2, isFloor: false });
+    renderManualDeducts();
+    updateDeductTotals();
+    rmCalc();
+}
+
+function removeManualDeduct(idx) {
+    manualDeducts.splice(idx, 1);
+    renderManualDeducts();
+    updateDeductTotals();
+    rmCalc();
+}
+
+function renderManualDeducts() {
+    const el = document.getElementById("deduct-manual-items");
+    if (!el) return;
+    el.innerHTML = manualDeducts.map((d, i) => `
+        <div class="deduct-tag">
+            <span>${d.label} (${d.w}×${d.h}m = ${d.m2}m²)</span>
+            <button onclick="removeManualDeduct(${i})" class="deduct-remove">×</button>
+        </div>`).join("");
+}
+
+function updateDeductTotals() {
+    // Sum all checked preset chips
+    let wallTotal = 0, floorTotal = 0;
+    document.querySelectorAll(".deduct-chip input[type=checkbox]:checked").forEach(cb => {
+        const label = cb.value;
+        const map = {
+            door:      { w:1.9, h:0.7, floor:false },
+            bathwall:  { w:1.7, h:0.6, floor:false },
+            bathend1:  { w:0.7, h:0.7, floor:false },
+            bathend2:  { w:0.7, h:0.7, floor:false },
+            bathfloor: { w:1.7, h:0.7, floor:true  },
+        };
+        const p = map[label];
+        if (!p) return;
+        const m2 = parseFloat((p.w * p.h).toFixed(3));
+        if (p.floor) floorTotal += m2;
+        else         wallTotal  += m2;
+    });
+    // Add manual deducts
+    manualDeducts.forEach(d => {
+        if (d.isFloor) floorTotal += d.m2;
+        else           wallTotal  += d.m2;
+    });
+
+    // Sync hidden inputs
+    const wEl = document.getElementById("rm-r-deduct");  if (wEl) wEl.value = wallTotal;
+    const fEl = document.getElementById("rm-r-fdeduct"); if (fEl) fEl.value = floorTotal;
+
+    // Update badge + total line
+    const badge = document.getElementById("deduct-total-badge");
+    const line  = document.getElementById("deduct-total-line");
+    const total = wallTotal + floorTotal;
+    if (badge) {
+        badge.textContent = total > 0 ? "-" + total.toFixed(2) + " m²" : "";
+        badge.style.display = total > 0 ? "inline" : "none";
+    }
+    if (line) {
+        if (total > 0) {
+            const parts = [];
+            if (wallTotal  > 0) parts.push(`Walls: -${wallTotal.toFixed(2)}m²`);
+            if (floorTotal > 0) parts.push(`Floor: -${floorTotal.toFixed(2)}m²`);
+            line.textContent = parts.join("  ·  ");
+            line.style.display = "block";
+        } else {
+            line.style.display = "none";
+        }
+    }
+}
+
+function clearDeducts() {
+    manualDeducts = [];
+    // Uncheck all chips
+    document.querySelectorAll(".deduct-chip input[type=checkbox]").forEach(cb => cb.checked = false);
+    renderManualDeducts();
+    updateDeductTotals();
+}
+
+// Keep backward compat
+function renderDeducts() { updateDeductTotals(); }
+
+/* ─── LIVE CALCULATION ─── */
+function rmCalc() {
+    updatePrepPriceBadges();
+    const surfaces = buildSurfaces();
+    const ct = document.getElementById("rm-customer-tiles")?.checked || false;
+
+    if (!surfaces) {
+        document.getElementById("rm-total").textContent = "0.00";
+        document.getElementById("rm-breakdown").innerHTML = "";
+        return;
+    }
+
+    const totalArea = surfaces.reduce((a, s) => a + s.area, 0);
+    let labourOpts = null;
+    if (currentLabourType === "day") {
+        const days    = parseFloat(document.getElementById("rm-days").value) || 0;
+        const dayRate = parseFloat(document.getElementById("rm-dayrate").value) || settings.dayRate || 200;
+        labourOpts = { type:"day", days, dayRate, totalArea };
+    }
+
+    surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0);
+    const mats  = surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
+    const lab   = surfaces.reduce((a, s) => a + (s.labour || 0), 0);
+    const ufh   = surfaces.reduce((a, s) => a + (s.ufhCost || 0), 0);
+    const prep  = surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
+
+    document.getElementById("rm-total").textContent = total.toFixed(2);
+
+    const wallM2  = surfaces.filter(s => s.type === "wall").reduce((a, s) => a + (s.area || 0), 0);
+    const floorM2 = surfaces.filter(s => s.type === "floor").reduce((a, s) => a + (s.area || 0), 0);
+    const areaParts = [];
+    if (wallM2  > 0) areaParts.push(`🧱 ${wallM2.toFixed(2)} m²`);
+    if (floorM2 > 0) areaParts.push(`⬜ ${floorM2.toFixed(2)} m²`);
+    const areaEl = document.getElementById("rm-area");
+    if (areaEl) areaEl.textContent = areaParts.join("  ");
+    // Aggregate bag/board quantities across all surfaces
+    const totalAdhBags    = surfaces.reduce((a, s) => a + (s.adhBags     || 0), 0);
+    const totalGroutBags  = surfaces.reduce((a, s) => a + (s.groutBags   || 0), 0);
+    const totalGroutKg    = surfaces.reduce((a, s) => a + (s.groutKg     || 0), 0);
+    const totalCBBoards   = surfaces.reduce((a, s) => a + (s.cementBoards|| 0), 0);
+    const totalLevelBags  = surfaces.reduce((a, s) => a + (s.levelBags   || 0), 0);
+
+    const parts = [];
+    if (mats > 0) parts.push(`Materials £${mats.toFixed(2)}`);
+    if (lab  > 0) {
+        const labLabel = currentLabourType === "day"
+            ? `Labour £${lab.toFixed(2)} (${document.getElementById("rm-days").value||0} days)`
+            : `Labour £${lab.toFixed(2)}`;
+        parts.push(labLabel);
+    }
+    if (ufh  > 0) parts.push(`UFH £${ufh.toFixed(2)}`);
+    if (totalAdhBags   > 0) parts.push(`Adhesive: ${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""}`);
+    if (totalGroutBags > 0) parts.push(`Grout: ${totalGroutBags} × 2.5kg bag${totalGroutBags !== 1 ? "s" : ""} (${totalGroutKg}kg)`);
+    if (totalCBBoards  > 0) parts.push(`Cement Board: ${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""}`);
+    if (totalLevelBags > 0) parts.push(`Levelling: ${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}`);
+    if (prep > 0 && totalCBBoards === 0 && totalLevelBags === 0) parts.push(`Prep £${prep.toFixed(2)}`);
+    document.getElementById("rm-breakdown").innerHTML =
+        parts.map(p => `<span class="breakdown-item">${p}</span>`).join(" · ");
+}
+
+/* ─── SAVE ROOM ─── */
+function saveRoom() {
+    const name = document.getElementById("rm-name").value.trim();
+    if (!name) { alert("Please enter a room name."); return; }
+
+    const surfaces = buildSurfaces();
+    if (!surfaces) { alert("Please fill in the measurements."); return; }
+
+    const ct       = document.getElementById("rm-customer-tiles").checked;
+    const totalArea = surfaces.reduce((a, s) => a + s.area, 0);
+
+    let labourOpts = null;
+    let days = 0, dayRate = settings.dayRate || 200;
+    if (currentLabourType === "day") {
+        days    = parseFloat(document.getElementById("rm-days").value) || 0;
+        dayRate = parseFloat(document.getElementById("rm-dayrate").value) || settings.dayRate || 200;
+        labourOpts = { type:"day", days, dayRate, totalArea };
+    }
+
+    surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+
+    const area       = parseFloat(totalArea.toFixed(2));
+    const total      = surfaces.reduce((a, s) => a + parseFloat(s.total), 0);
+    const floorCount = surfaces.filter(s => s.type === "floor").length;
+    const wallCount  = surfaces.filter(s => s.type === "wall").length;
+    const type = floorCount && wallCount ? "floor + walls" : wallCount ? "wall" : "floor";
+
+    const room = {
+        name,
+        wallDeducts: wallDeducts.slice(),
+        floorDeducts: floorDeducts.slice(),
+        savedType:   currentSurfType,
+        labourType:  currentLabourType,
+        days:        currentLabourType === "day" ? days : undefined,
+        dayRate:     currentLabourType === "day" ? dayRate : undefined,
+        type,
+        tileSupply:  ct ? "customer" : "contractor",
+        surfaces,
+        area,
+        total:       total.toFixed(2),
+        ufh:         surfaces.some(s => s.ufh),
+        tiles:       surfaces.reduce((a, s) => a + (s.tiles || 0), 0),
+        adhBags:     surfaces.reduce((a, s) => a + (s.adhBags || 0), 0),
+        groutKg:     parseFloat(surfaces.reduce((a, s) => a + (s.groutKg || 0), 0).toFixed(1))
+    };
+
+    const j = getJob();
+    if (currentRoomIdx === null) { j.rooms.push(room); }
+    else                         { j.rooms[currentRoomIdx] = room; }
+
+    saveAll();
+    renderJobView();
+    goJob();
+}
+
+/* ================================================================
+   SETTINGS
+================================================================ */
+function goSettings() {
+    const s = settings;
+    document.getElementById("set-tile-price").value     = s.tilePrice;
+    document.getElementById("set-grout-price").value    = s.groutPrice;
+    document.getElementById("set-adhesive-price").value = s.adhesivePrice;
+    document.getElementById("set-silicone-price").value = s.siliconePrice || 6.50;
+    document.getElementById("set-markup").value         = s.markup;
+    document.getElementById("set-labour-markup").value  = s.labourMarkup ? "true" : "false";
+    document.getElementById("set-labour-m2").value      = s.labourM2;
+    document.getElementById("set-day-rate").value       = s.dayRate;
+    document.getElementById("set-cementboard").value    = s.cementBoard  || 18;
+    document.getElementById("set-membrane").value       = s.membrane     || 8;
+    document.getElementById("set-level2").value         = s.level2       || 5;
+    document.getElementById("set-level3").value         = s.level3       || 7;
+    document.getElementById("set-level4").value         = s.level4       || 9;
+    document.getElementById("set-tanking").value        = s.tanking      || 15;
+    document.getElementById("set-vat").value            = s.applyVat !== false ? "true" : "false";
+    document.getElementById("set-company-name").value   = s.companyName  || "";
+    document.getElementById("set-company-phone").value  = s.companyPhone || "";
+    document.getElementById("set-company-email").value  = s.companyEmail || "";
+    document.getElementById("set-terms").value          = s.terms || "";
+    show("screen-settings");
+}
+
+function saveSettings() {
+    settings = {
+        tilePrice:     parseFloat(document.getElementById("set-tile-price").value)     || 25.00,
+        groutPrice:    parseFloat(document.getElementById("set-grout-price").value)    || 4.50,
+        adhesivePrice: parseFloat(document.getElementById("set-adhesive-price").value) || 22,
+        siliconePrice: parseFloat(document.getElementById("set-silicone-price").value) || 6.50,
+        markup:        parseFloat(document.getElementById("set-markup").value)         || 20,
+        labourMarkup:  document.getElementById("set-labour-markup").value === "true",
+        labourM2:      parseFloat(document.getElementById("set-labour-m2").value)      || 32,
+        dayRate:       parseFloat(document.getElementById("set-day-rate").value)       || 200,
+        cementBoard:   parseFloat(document.getElementById("set-cementboard").value)    || 18,
+        membrane:      parseFloat(document.getElementById("set-membrane").value)       || 8,
+        level2:        parseFloat(document.getElementById("set-level2").value)         || 5,
+        level3:        parseFloat(document.getElementById("set-level3").value)         || 7,
+        level4:        parseFloat(document.getElementById("set-level4").value)         || 9,
+        tanking:       parseFloat(document.getElementById("set-tanking").value)        || 15,
+        applyVat:      document.getElementById("set-vat").value === "true",
+        companyName:   document.getElementById("set-company-name").value.trim(),
+        companyPhone:  document.getElementById("set-company-phone").value.trim(),
+        companyEmail:  document.getElementById("set-company-email").value.trim(),
+        terms:         document.getElementById("set-terms").value.trim()
+    };
+    localStorage.setItem("tileiq-settings", JSON.stringify(settings));
+    goDashboard();
+}
+
+/* ================================================================
+   QUOTE PREVIEW
+================================================================ */
+function goQuote() {
+    const j = getJob();
+    if (!j.rooms || !j.rooms.length) {
+        alert("Add at least one room before generating a quote.");
+        return;
+    }
+    document.getElementById("q-vat").value    = settings.applyVat !== false ? "true" : "false";
+    document.getElementById("q-expiry").value = 30;
+    document.getElementById("ai-box").innerHTML = "";
+    renderQuote();
+    show("screen-quote");
+}
+
+/* ─── MATERIALS BREAKDOWN ─── */
+function goMaterials() {
+    renderMaterials();
+    show("screen-materials");
+}
+
+function renderMaterials() {
+    const j = getJob();
+    const rooms = j.rooms || [];
+    if (!rooms.length) {
+        document.getElementById("materials-output").innerHTML = '<p style="color:#888;text-align:center;padding:24px;">No rooms added yet.</p>';
+        return;
+    }
+
+    // Recalculate all surfaces fresh
+    let grandTiles = 0, grandAdhBags = 0, grandAdhKg = 0;
+    let grandGroutBags = 0, grandGroutKg = 0;
+    let grandCBBoards = 0, grandLevelBags = 0;
+    let hasUFH = false;
+
+    const roomBlocks = rooms.map(room => {
+        const surfaces = room.surfaces || [];
+        if (!surfaces.length) return "";
+
+        const ct        = room.tileSupply === "customer";
+        const totalArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+        let labourOpts  = null;
+        if (room.labourType === "day") {
+            labourOpts = { type:"day", days: room.days||1, dayRate: room.dayRate||settings.dayRate||200, totalArea };
+        }
+        surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+
+        const wallM2  = surfaces.filter(s => s.type==="wall").reduce((a,s)=>a+(s.area||0),0);
+        const floorM2 = surfaces.filter(s => s.type==="floor").reduce((a,s)=>a+(s.area||0),0);
+
+        const rows = surfaces.map(s => {
+            const icon      = s.type === "floor" ? "⬜" : "🧱";
+            const tileDesc  = `${s.tileW}×${s.tileH}mm`;
+            const adhKg     = (s.adhBags * 20).toFixed(0);
+            grandTiles     += s.tiles     || 0;
+            grandAdhBags   += s.adhBags   || 0;
+            grandAdhKg     += s.adhBags * 20;
+            grandGroutBags += s.groutBags || 0;
+            grandGroutKg   += s.groutKg   || 0;
+            if (s.cementBoards) grandCBBoards  += s.cementBoards;
+            if (s.levelBags)    grandLevelBags += s.levelBags;
+            if (s.ufh)          hasUFH = true;
+
+            const prepItems = [];
+            if (s.cementBoards) prepItems.push(`${s.cementBoards} cement board${s.cementBoards!==1?"s":""}`);
+            if (s.levelBags)    prepItems.push(`${s.levelBags} × 20kg levelling bag${s.levelBags!==1?"s":""}`);
+            if (s.tanking)      prepItems.push("tanking applied");
+
+            return `
+            <tr class="mat-surf-row">
+                <td>${icon} ${esc(s.label)}</td>
+                <td style="text-align:right">${s.area.toFixed(2)} m²</td>
+                <td style="text-align:right">${s.tiles}<br><span class="mat-sub">${tileDesc}</span></td>
+                <td style="text-align:right">${s.adhBags} bag${s.adhBags!==1?"s":""}<br><span class="mat-sub">${adhKg}kg · ${s.adhCat.split(" ")[0]+' '+s.adhCat.split(" ")[1]||""}</span></td>
+                <td style="text-align:right">${s.groutBags} bag${s.groutBags!==1?"s":""}<br><span class="mat-sub">${s.groutKg}kg total</span></td>
+                ${prepItems.length ? `<td style="text-align:right;font-size:11px;color:#666;">${prepItems.join("<br>")}</td>` : "<td></td>"}
+            </tr>`;
+        }).join("");
+
+        const areaSummary = [
+            wallM2  > 0 ? `🧱 ${wallM2.toFixed(2)} m²` : "",
+            floorM2 > 0 ? `⬜ ${floorM2.toFixed(2)} m²` : "",
+        ].filter(Boolean).join("  ·  ");
+
+        return `
+        <div class="mat-room-block">
+            <div class="mat-room-title">${esc(room.name)} <span class="mat-room-area">${areaSummary}</span></div>
+            <table class="mat-table">
+                <thead>
+                    <tr>
+                        <th>Surface</th>
+                        <th style="text-align:right">Area</th>
+                        <th style="text-align:right">Tiles</th>
+                        <th style="text-align:right">Adhesive<br><span style="font-weight:400;font-size:10px">20kg bags</span></th>
+                        <th style="text-align:right">Grout<br><span style="font-weight:400;font-size:10px">2.5kg bags</span></th>
+                        <th style="text-align:right">Prep</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>`;
+    }).join("");
+
+    // Grand totals
+    const totalsHtml = `
+    <div class="mat-totals-card">
+        <div class="mat-totals-title">Job Totals</div>
+        <div class="mat-totals-grid">
+            <div class="mat-total-item"><span class="mat-total-label">Tiles</span><span class="mat-total-value">${grandTiles}</span></div>
+            <div class="mat-total-item"><span class="mat-total-label">Adhesive</span><span class="mat-total-value">${grandAdhBags} × 20kg<br><span style="font-size:11px;font-weight:400;">${grandAdhKg.toFixed(0)}kg total</span></span></div>
+            <div class="mat-total-item"><span class="mat-total-label">Grout</span><span class="mat-total-value">${grandGroutBags} × 2.5kg<br><span style="font-size:11px;font-weight:400;">${parseFloat(grandGroutKg.toFixed(1))}kg total</span></span></div>
+            ${grandCBBoards  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Cement Board</span><span class="mat-total-value">${grandCBBoards} board${grandCBBoards!==1?"s":""}</span></div>` : ""}
+            ${grandLevelBags > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Levelling</span><span class="mat-total-value">${grandLevelBags} × 20kg bag${grandLevelBags!==1?"s":""}</span></div>` : ""}
+        </div>
+    </div>`;
+
+    document.getElementById("materials-output").innerHTML = totalsHtml + roomBlocks;
+}
+
+function renderQuote() {
+    const j      = getJob();
+    const applyVat = document.getElementById("q-vat").value === "true";
+    const expDays  = parseInt(document.getElementById("q-expiry").value) || 30;
+    const today    = new Date();
+    const expiry   = new Date(today); expiry.setDate(expiry.getDate() + expDays);
+    const fmt      = d => d.toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
+
+    const co    = settings.companyName  || "Your Tiling Company";
+    const phone = settings.companyPhone || "";
+    const email = settings.companyEmail || "";
+    const quoteRef = "Q" + Date.now().toString().slice(-6);
+
+    const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
+
+    let totalMats = 0, totalLabour = 0, totalPrep = 0;
+    let totalAdhBags = 0, totalGroutBags = 0, totalGroutKg = 0, totalCBBoards = 0, totalLevelBags = 0;
+
+    (j.rooms || []).forEach(room => {
+        const surfaces = room.surfaces || [];
+        if (!surfaces.length) return;
+        const ct       = room.tileSupply === "customer";
+        const totalArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+        let labourOpts = null;
+        if (room.labourType === "day") {
+            labourOpts = { type:"day", days: room.days || 1, dayRate: room.dayRate || settings.dayRate || 200, totalArea };
+        }
+        surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+        totalMats      += surfaces.reduce((a, s) => a + (s.materialSell  || 0), 0);
+        totalLabour    += surfaces.reduce((a, s) => a + (s.labour || 0) + (s.ufhCost || 0), 0);
+        totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost      || 0), 0);
+        totalAdhBags   += surfaces.reduce((a, s) => a + (s.adhBags       || 0), 0);
+        totalGroutBags += surfaces.reduce((a, s) => a + (s.groutBags     || 0), 0);
+        totalGroutKg   += surfaces.reduce((a, s) => a + (s.groutKg       || 0), 0);
+        totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards  || 0), 0);
+        totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
+    });
+
+    const subtotal = totalMats + totalLabour + totalPrep;
+    const vatAmt   = applyVat ? subtotal * 0.2 : 0;
+    const grand    = subtotal + vatAmt;
+
+    document.getElementById("quote-output").innerHTML = `
+    <div class="quote-doc">
+        <div class="quote-header">
+            <div class="quote-company">
+                <div class="quote-company-name">${esc(co)}</div>
+                ${phone ? `<div>${esc(phone)}</div>` : ""}
+                ${email ? `<div>${esc(email)}</div>` : ""}
+            </div>
+            <div class="quote-meta">
+                <div class="quote-ref">${quoteRef}</div>
+                <div>Issued: ${fmt(today)}</div>
+                <div>Expires: ${fmt(expiry)}</div>
+            </div>
+        </div>
+
+        <div class="quote-customer">
+            <strong>${esc(j.customerName)}</strong>
+            ${addr ? `<br>${esc(addr)}` : ""}
+            ${j.email ? `<br>${esc(j.email)}` : ""}
+        </div>
+
+        <table class="quote-table">
+            <tbody>
+                <tr><td>Materials</td><td style="text-align:right">£${totalMats.toFixed(2)}</td></tr>
+                <tr><td>Labour</td><td style="text-align:right">£${totalLabour.toFixed(2)}</td></tr>
+                ${totalPrep > 0 ? `<tr><td>Preparation</td><td style="text-align:right">£${totalPrep.toFixed(2)}</td></tr>` : ""}
+            </tbody>
+        </table>
+        <div class="quote-mat-schedule">
+            <div class="qms-title">Materials Schedule</div>
+            ${totalAdhBags   > 0 ? `<div class="qms-row"><span>Tile Adhesive</span><span>${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""}</span></div>` : ""}
+            ${totalGroutBags > 0 ? `<div class="qms-row"><span>Grout</span><span>${totalGroutBags} × 2.5kg bag${totalGroutBags !== 1 ? "s" : ""} (${parseFloat(totalGroutKg.toFixed(1))}kg total)</span></div>` : ""}
+            ${totalCBBoards  > 0 ? `<div class="qms-row"><span>Cement Board</span><span>${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""} (0.96m² each)</span></div>` : ""}
+            ${totalLevelBags > 0 ? `<div class="qms-row"><span>Levelling Compound</span><span>${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}</span></div>` : ""}
+        </div>
+
+        <div class="quote-totals">
+            <div class="quote-total-row"><span>Subtotal</span><span>£${subtotal.toFixed(2)}</span></div>
+            ${applyVat ? `<div class="quote-total-row"><span>VAT (20%)</span><span>£${vatAmt.toFixed(2)}</span></div>` : ""}
+            <div class="quote-total-row quote-grand"><span>Total</span><span>£${grand.toFixed(2)}</span></div>
+        </div>
+
+        ${settings.terms ? `<div class="quote-terms">${esc(settings.terms)}</div>` : ""}
+    </div>`;
+}
+
+/* ─── AI Description ─── */
+async function generateAI() {
+    const j     = getJob();
+    const style = document.getElementById("ai-style").value;
+    const box   = document.getElementById("ai-box");
+    const rooms = (j.rooms || []).map(r =>
+        `${r.name}: ${r.type}, ${r.area} m², £${r.total}`
+    ).join("; ");
+
+    box.innerHTML = `<div class="ai-loading">✨ Generating…</div>`;
+    try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 200,
+                messages: [{
+                    role: "user",
+                    content: `Write a single short paragraph (60-90 words) describing the scope of work for a tiling job quote. Style: ${style}. Customer: ${j.customerName}. Rooms: ${rooms}. Use UK English, third person, professional tone.`
+                }]
+            })
+        });
+        const data = await res.json();
+        const text = data.content?.[0]?.text || "Could not generate description.";
+        box.innerHTML = `<div class="ai-result">${esc(text)}</div>`;
+    } catch(e) {
+        box.innerHTML = `<div class="ai-result">Error generating description. Please try again.</div>`;
+    }
+}
+
+/* ─── CSV Export ─── */
+function exportCSV() {
+    const j = getJob();
+    const rows = [["Quote ID","Customer","Room","Surface","Type","Area (m²)","Total (ex VAT)"]];
+    const qid  = "Q" + Date.now().toString().slice(-6);
+    (j.rooms || []).forEach(room => {
+        (room.surfaces || []).forEach(s => {
+            rows.push([qid, j.customerName, room.name, s.label, s.type, s.area.toFixed(2), s.total]);
+        });
+    });
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type:"text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `${j.customerName.replace(/\s+/g,"-")}-quote.csv`;
+    a.click(); URL.revokeObjectURL(url);
+}
+
+/* ─── FreeAgent Export ─── */
+function exportFreeAgent() {
+    const j = getJob();
+    const applyVat = document.getElementById("q-vat").value === "true";
+    const subtotal = (j.rooms || []).reduce((a, r) => a + parseFloat(r.total || 0), 0);
+    const payload  = {
+        contact:   j.customerName,
+        reference: "Q" + Date.now().toString().slice(-6),
+        dated_on:  new Date().toISOString().split("T")[0],
+        items: (j.rooms || []).flatMap(room =>
+            (room.surfaces || []).map(s => ({
+                description: `${room.name} – ${s.label}`,
+                quantity: s.area,
+                price: parseFloat(s.total),
+                vat_rate: applyVat ? 20 : 0
+            }))
+        )
+    };
+    console.log("FreeAgent payload:", JSON.stringify(payload, null, 2));
+    alert("FreeAgent payload logged to console. Connect your FreeAgent API key in Settings to enable live sync.");
+}
+
+/* ─── PDF ─── */
+function downloadPDF() {
+    const { jsPDF } = window.jspdf;
+    const j = getJob();
+    const applyVat = document.getElementById("q-vat").value === "true";
+    const doc = new jsPDF({ unit:"mm", format:"a4" });
+
+    const amber = [230, 175, 46];
+    const dark  = [30, 35, 40];
+    const mid   = [90, 95, 100];
+    const W     = 210;
+
+    // Header band
+    doc.setFillColor(...dark);
+    doc.rect(0, 0, W, 28, "F");
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...amber);
+    doc.text(settings.companyName || "Your Tiling Company", 14, 12);
+    doc.setFontSize(9);
+    doc.setTextColor(200,200,200);
+    if (settings.companyPhone) doc.text(settings.companyPhone, 14, 19);
+    if (settings.companyEmail) doc.text(settings.companyEmail, 14, 24);
+
+    const quoteRef = "Q" + Date.now().toString().slice(-6);
+    doc.setTextColor(...amber);
+    doc.setFontSize(11);
+    doc.text(quoteRef, W - 14, 12, { align:"right" });
+    doc.setFontSize(8); doc.setTextColor(200,200,200);
+    const today  = new Date();
+    const expiry = new Date(); expiry.setDate(today.getDate() + parseInt(document.getElementById("q-expiry").value || 30));
+    const fmt    = d => d.toLocaleDateString("en-GB");
+    doc.text(`Issued: ${fmt(today)}`, W - 14, 19, { align:"right" });
+    doc.text(`Expires: ${fmt(expiry)}`, W - 14, 24, { align:"right" });
+
+    // Customer block
+    let y = 38;
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(10);
+    doc.text(j.customerName, 14, y);
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...mid);
+    const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
+    if (addr) { y += 5; doc.text(addr, 14, y); }
+    if (j.email) { y += 5; doc.text(j.email, 14, y); }
+
+    // Table
+    y += 10;
+    doc.setFillColor(...amber);
+    doc.rect(14, y, W - 28, 7, "F");
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(9);
+    doc.text("Description", 17, y + 5);
+    doc.text("Area", 145, y + 5);
+    doc.text("Total", W - 14, y + 5, { align:"right" });
+    y += 9;
+
+    let subtotal = 0;
+    doc.setFont("helvetica","normal");
+    (j.rooms || []).forEach(room => {
+        doc.setTextColor(...dark);
+        doc.setFont("helvetica","bold");
+        doc.setFontSize(8);
+        doc.text(room.name, 17, y);
+        y += 5;
+        (room.surfaces || []).forEach(s => {
+            doc.setFont("helvetica","normal");
+            doc.setTextColor(...mid);
+            doc.text(`  ${s.label}`, 17, y);
+            doc.text(`${s.area.toFixed(2)} m²`, 145, y);
+            const cost = parseFloat(s.total || 0);
+            subtotal += cost;
+            doc.text(`£${cost.toFixed(2)}`, W - 14, y, { align:"right" });
+            y += 5;
+        });
+        y += 2;
+    });
+
+    // Totals
+    y += 2;
+    doc.setDrawColor(...amber);
+    doc.setLineWidth(0.5);
+    doc.line(14, y, W - 14, y);
+    y += 6;
+    doc.setTextColor(...dark);
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(9);
+    doc.text("Subtotal", W - 55, y);
+    doc.text(`£${subtotal.toFixed(2)}`, W - 14, y, { align:"right" });
+    if (applyVat) {
+        y += 5;
+        doc.text("VAT (20%)", W - 55, y);
+        doc.text(`£${(subtotal * 0.2).toFixed(2)}`, W - 14, y, { align:"right" });
+    }
+    y += 6;
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...amber);
+    const grand = applyVat ? subtotal * 1.2 : subtotal;
+    doc.text("TOTAL", W - 55, y);
+    doc.text(`£${grand.toFixed(2)}`, W - 14, y, { align:"right" });
+
+    if (settings.terms) {
+        y += 12;
+        doc.setTextColor(...mid);
+        doc.setFont("helvetica","normal");
+        doc.setFontSize(7);
+        doc.text(settings.terms, 14, y, { maxWidth: W - 28 });
+    }
+
+    doc.save(`${j.customerName.replace(/\s+/g,"-")}-quote.pdf`);
+}
+
+</script>
+</body>
+</html>
