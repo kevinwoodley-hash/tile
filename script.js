@@ -11,6 +11,7 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     groutPrice:    4.50,
     adhesivePrice: 22,
     siliconePrice: 6.50,
+    siliconeCoverage: 6,
     markup:        20,
     labourMarkup:  false,
     labourM2:      32,
@@ -47,6 +48,34 @@ function getJob()  { return jobs.find(j => j.id === currentJobId); }
 function saveAll() { localStorage.setItem("tileiq-jobs", JSON.stringify(jobs)); }
 function esc(s)    { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function uid()     { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+
+/* ─── SEALANT (silicone) ───────────────────────────────────────
+   Calculated per room to avoid double-counting walls/surfaces.
+   Metres = 2×(L+W) + bath/tray perimeter + (external corners × room height) − deductions
+   Tubes  = ceil(metres / settings.siliconeCoverage)
+-----------------------------------------------------------------*/
+function calcSealantRoom(room) {
+    if (!room || room.sealantEnabled === false) return { metres: 0, tubes: 0 };
+
+    const L = parseFloat(room.length) || 0;
+    const W = parseFloat(room.width)  || 0;
+    const H = parseFloat(room.height) || 0;
+
+    const bath   = parseFloat(room.sealantBathPerim) || 0;
+    const deduct = parseFloat(room.sealantDeduct)    || 0;
+    const corners = parseInt(room.sealantCorners)    || 0;
+
+    const perimeter = (L > 0 && W > 0) ? 2 * (L + W) : 0;
+    const cornerMetres = (corners > 0 && H > 0) ? (corners * H) : 0;
+
+    const metresRaw = Math.max(0, perimeter + bath + cornerMetres - deduct);
+    const coverage  = parseFloat(settings.siliconeCoverage) || 6;
+
+    const tubes = metresRaw > 0 ? Math.ceil(metresRaw / coverage) : 0;
+
+    return { metres: parseFloat(metresRaw.toFixed(1)), tubes };
+}
 
 function statusBadge(s) {
     const map = { enquiry:"badge-enquiry", quoted:"badge-quoted", accepted:"badge-accepted", complete:"badge-complete" };
@@ -238,6 +267,11 @@ function renderJobView() {
             levelBags> 0 ? `Levelling: ${levelBags} × 20kg`                                         : "",
         ].filter(Boolean).join("  ·  ");
 
+        const seal = calcSealantRoom(r);
+        grandSiliconeTubes  += seal.tubes;
+        grandSiliconeMetres += seal.metres;
+        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span></div>` : "";
+
         return `
         <div class="room-card">
             <div class="room-card-header">
@@ -396,6 +430,10 @@ function clearRoomInputs() {
     ids.forEach(id => document.getElementById(id).value = "");
     document.getElementById("rm-r-inclfloor").checked = true;
     document.getElementById("rm-r-ufh").checked       = false;
+    const se = document.getElementById("rm-sealant-enabled"); if (se) se.value = "true";
+    const sb = document.getElementById("rm-sealant-bath"); if (sb) sb.value = "";
+    const sd = document.getElementById("rm-sealant-deduct"); if (sd) sd.value = "";
+    const sc = document.getElementById("rm-sealant-corners"); if (sc) sc.value = "";
     document.getElementById("rm-f-ufh").checked       = false;
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
@@ -433,8 +471,18 @@ function restoreRoomInputs(room) {
     const set   = (id, v) => { if (v !== undefined && v !== null) document.getElementById(id).value = v; };
     const setCb = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
 
+    // Sealant fields
+    set("rm-sealant-enabled", (room.sealantEnabled === false) ? "false" : "true");
+    set("rm-sealant-bath", room.sealantBathPerim || "");
+    set("rm-sealant-deduct", room.sealantDeduct || "");
+    set("rm-sealant-corners", room.sealantCorners || "");
+
     if (currentSurfType === "room") {
-        if (walls.length >= 4) {
+        if ((room.length||0) > 0 && (room.width||0) > 0 && (room.height||0) > 0) {
+            set("rm-r-length", room.length);
+            set("rm-r-width",  room.width);
+            set("rm-r-height", room.height);
+        } else if (walls.length >= 4) {
             set("rm-r-length", walls[0].width);
             set("rm-r-width",  walls[2].width);
             set("rm-r-height", walls[0].height);
@@ -846,8 +894,24 @@ function saveRoom() {
     const wallCount  = surfaces.filter(s => s.type === "wall").length;
     const type = floorCount && wallCount ? "floor + walls" : wallCount ? "wall" : "floor";
 
+    const roomLen = parseFloat(document.getElementById("rm-r-length")?.value) || 0;
+    const roomWid = parseFloat(document.getElementById("rm-r-width")?.value)  || 0;
+    const roomHei = parseFloat(document.getElementById("rm-r-height")?.value) || 0;
+
+    const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
+    const sealantBathPerim = parseFloat(document.getElementById("rm-sealant-bath")?.value) || 0;
+    const sealantDeduct    = parseFloat(document.getElementById("rm-sealant-deduct")?.value) || 0;
+    const sealantCorners   = parseInt(document.getElementById("rm-sealant-corners")?.value) || 0;
+
     const room = {
         name,
+        length: roomLen || undefined,
+        width:  roomWid || undefined,
+        height: roomHei || undefined,
+        sealantEnabled,
+        sealantBathPerim,
+        sealantDeduct,
+        sealantCorners,
         wallDeducts: wallDeducts.slice(),
         floorDeducts: floorDeducts.slice(),
         savedType:   currentSurfType,
@@ -883,6 +947,7 @@ function goSettings() {
     document.getElementById("set-grout-price").value    = s.groutPrice;
     document.getElementById("set-adhesive-price").value = s.adhesivePrice;
     document.getElementById("set-silicone-price").value = s.siliconePrice || 6.50;
+    document.getElementById("set-silicone-coverage").value = s.siliconeCoverage || 6;
     document.getElementById("set-markup").value         = s.markup;
     document.getElementById("set-labour-markup").value  = s.labourMarkup ? "true" : "false";
     document.getElementById("set-labour-m2").value      = s.labourM2;
@@ -907,6 +972,7 @@ function saveSettings() {
         groutPrice:    parseFloat(document.getElementById("set-grout-price").value)    || 4.50,
         adhesivePrice: parseFloat(document.getElementById("set-adhesive-price").value) || 22,
         siliconePrice: parseFloat(document.getElementById("set-silicone-price").value) || 6.50,
+        siliconeCoverage: parseFloat(document.getElementById("set-silicone-coverage").value) || 6,
         markup:        parseFloat(document.getElementById("set-markup").value)         || 20,
         labourMarkup:  document.getElementById("set-labour-markup").value === "true",
         labourM2:      parseFloat(document.getElementById("set-labour-m2").value)      || 32,
@@ -1018,9 +1084,15 @@ function renderMaterials() {
             floorM2 > 0 ? `⬜ ${floorM2.toFixed(2)} m²` : "",
         ].filter(Boolean).join("  ·  ");
 
+        const seal = calcSealantRoom(room);
+        grandSiliconeTubes  += seal.tubes;
+        grandSiliconeMetres += seal.metres;
+        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span></div>` : "";
+
         return `
         <div class="mat-room-block">
             <div class="mat-room-title">${esc(room.name)} <span class="mat-room-area">${areaSummary}</span></div>
+            ${sealLine}
             <table class="mat-table">
                 <thead>
                     <tr>
@@ -1045,6 +1117,7 @@ function renderMaterials() {
             <div class="mat-total-item"><span class="mat-total-label">Tiles</span><span class="mat-total-value">${grandTiles}</span></div>
             <div class="mat-total-item"><span class="mat-total-label">Adhesive</span><span class="mat-total-value">${grandAdhBags} × 20kg<br><span style="font-size:11px;font-weight:400;">${grandAdhKg.toFixed(0)}kg total</span></span></div>
             <div class="mat-total-item"><span class="mat-total-label">Grout</span><span class="mat-total-value">Wall: ${grandWallGroutBags} × 2.5kg<br>Floor: ${grandFloorGroutBags} × 2.5kg<br><span style="font-size:11px;font-weight:600;">Total: ${grandWallGroutBags + grandFloorGroutBags} bag${(grandWallGroutBags + grandFloorGroutBags)!==1?"s":""}</span></span></div>
+            ${grandSiliconeTubes > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Sealant</span><span class="mat-total-value">${grandSiliconeTubes} tube${grandSiliconeTubes!==1?"s":""}<br><span style="font-size:11px;font-weight:400;">${grandSiliconeMetres.toFixed(1)}m total</span></span></div>` : ""}
             ${grandCBBoards  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Cement Board</span><span class="mat-total-value">${grandCBBoards} board${grandCBBoards!==1?"s":""}</span></div>` : ""}
             ${grandLevelBags > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Levelling</span><span class="mat-total-value">${grandLevelBags} × 20kg bag${grandLevelBags!==1?"s":""}</span></div>` : ""}
         </div>
@@ -1072,7 +1145,8 @@ function renderQuote() {
     let totalAdhBags = 0,
         totalWallGroutBags = 0, totalWallGroutKg = 0,
         totalFloorGroutBags = 0, totalFloorGroutKg = 0,
-        totalCBBoards = 0, totalLevelBags = 0;
+        totalCBBoards = 0, totalLevelBags = 0,
+        totalSiliconeTubes = 0, totalSiliconeMetres = 0;
 
     // Per-room breakdown + per-room material schedule
     const roomBreakdownRows = (j.rooms || []).map(room => {
@@ -1212,6 +1286,10 @@ const roomTotal = parseFloat(room.total || 0);
     if (totalAdhBags   > 0) jobScheduleLines.push(`<div class="qms-row"><span>Tile Adhesive (whole job)</span><span>${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobAdhSell.toFixed(2)}</span></span></div>`);
         if (totalWallGroutBags > 0) jobScheduleLines.push(`<div class="qms-row"><span>Wall Grout (whole job)</span><span>${totalWallGroutBags} × 2.5kg bag${totalWallGroutBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobWallGroutSell.toFixed(2)}</span></span></div>`);
     if (totalFloorGroutBags > 0) jobScheduleLines.push(`<div class="qms-row"><span>Floor Grout (whole job)</span><span>${totalFloorGroutBags} × 2.5kg bag${totalFloorGroutBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobFloorGroutSell.toFixed(2)}</span></span></div>`);
+    
+    const jobSilBase = totalSiliconeTubes * (parseFloat(settings.siliconePrice) || 0);
+    const jobSilSell = jobSilBase * (1 + (parseFloat(settings.markup) || 0) / 100);
+    if (totalSiliconeTubes > 0) jobScheduleLines.push(`<div class="qms-row"><span>Sealant (whole job)</span><span>${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobSilSell.toFixed(2)}</span></span></div>`);
     const jobScheduleHtml = jobScheduleLines.length ? `
       <div style="margin-top:10px;">
         <div class="qms-title" style="margin-bottom:6px;">Whole job</div>
