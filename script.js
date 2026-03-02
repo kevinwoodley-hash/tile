@@ -1046,16 +1046,16 @@ function renderMaterials() {
 }
 
 function renderQuote() {
-    const j      = getJob();
+    const j        = getJob();
     const applyVat = document.getElementById("q-vat").value === "true";
     const expDays  = parseInt(document.getElementById("q-expiry").value) || 30;
     const today    = new Date();
     const expiry   = new Date(today); expiry.setDate(expiry.getDate() + expDays);
     const fmt      = d => d.toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
 
-    const co    = settings.companyName  || "Your Tiling Company";
-    const phone = settings.companyPhone || "";
-    const email = settings.companyEmail || "";
+    const co      = settings.companyName  || "Your Tiling Company";
+    const phone   = settings.companyPhone || "";
+    const email   = settings.companyEmail || "";
     const quoteRef = "Q" + Date.now().toString().slice(-6);
 
     const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
@@ -1063,25 +1063,138 @@ function renderQuote() {
     let totalMats = 0, totalLabour = 0, totalPrep = 0;
     let totalAdhBags = 0, totalGroutBags = 0, totalGroutKg = 0, totalCBBoards = 0, totalLevelBags = 0;
 
-    (j.rooms || []).forEach(room => {
+    // Per-room breakdown + per-room material schedule
+    const roomBreakdownRows = (j.rooms || []).map(room => {
         const surfaces = room.surfaces || [];
-        if (!surfaces.length) return;
-        const ct       = room.tileSupply === "customer";
+        if (!surfaces.length) return "";
+
+        const ct        = room.tileSupply === "customer";
         const totalArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+
         let labourOpts = null;
         if (room.labourType === "day") {
             labourOpts = { type:"day", days: room.days || 1, dayRate: room.dayRate || settings.dayRate || 200, totalArea };
         }
+
+        // Ensure all quantities/prices are up to date
         surfaces.forEach(s => calcSurface(s, ct, labourOpts));
-        totalMats      += surfaces.reduce((a, s) => a + (s.materialSell  || 0), 0);
+
+        // Totals for overall summary
+        totalMats      += surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
         totalLabour    += surfaces.reduce((a, s) => a + (s.labour || 0) + (s.ufhCost || 0), 0);
-        totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost      || 0), 0);
-        totalAdhBags   += surfaces.reduce((a, s) => a + (s.adhBags       || 0), 0);
-        totalGroutBags += surfaces.reduce((a, s) => a + (s.groutBags     || 0), 0);
-        totalGroutKg   += surfaces.reduce((a, s) => a + (s.groutKg       || 0), 0);
-        totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards  || 0), 0);
-        totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
-    });
+        totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
+        totalAdhBags   += surfaces.reduce((a, s) => a + (s.adhBags || 0), 0);
+        totalGroutBags += surfaces.reduce((a, s) => a + (s.groutBags || 0), 0);
+        totalGroutKg   += surfaces.reduce((a, s) => a + (s.groutKg || 0), 0);
+        totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
+        totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
+
+        // Per-room quantities
+        const adhBags    = surfaces.reduce((a, s) => a + (s.adhBags || 0), 0);
+        const groutBags  = surfaces.reduce((a, s) => a + (s.groutBags || 0), 0);
+        const groutKg    = surfaces.reduce((a, s) => a + (s.groutKg || 0), 0);
+        const cbBoards   = surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
+        const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
+
+                const mult = 1 + (parseFloat(settings.markup) || 0) / 100;
+
+        // Per-item sell values (kept simple: uses current unit assumptions in settings)
+        const adhSell   = adhBags   * (parseFloat(settings.adhesivePrice) || 0) * mult;
+        const groutSell = groutBags * 2.5 * (parseFloat(settings.groutPrice) || 0) * mult;
+
+        // Prep-related items use existing £/m² rates (matches current prep model)
+        const cbSell = surfaces.reduce((a, s) => {
+            if (s.type !== "floor" || !s.cementBoard) return a;
+            const rate = parseFloat(settings.cementBoard) || 18;
+            return a + (parseFloat(s.area) || 0) * rate;
+        }, 0);
+
+        const levelSell = surfaces.reduce((a, s) => {
+            if (s.type !== "floor" || !s.levelling) return a;
+            const depth = s.levelDepth || 2;
+            const rate  = depth === 3 ? (parseFloat(settings.level3) || 7)
+                        : depth === 4 ? (parseFloat(settings.level4) || 9)
+                        :               (parseFloat(settings.level2) || 5);
+            return a + (parseFloat(s.area) || 0) * rate;
+        }, 0);
+
+        const inlineParts = [];
+        if (adhBags   > 0) inlineParts.push(`Adhesive ${adhBags} bag${adhBags !== 1 ? "s" : ""} (£${adhSell.toFixed(2)})`);
+        if (groutBags > 0) inlineParts.push(`Grout ${groutBags} bag${groutBags !== 1 ? "s" : ""} (£${groutSell.toFixed(2)})`);
+        if (cbBoards  > 0) inlineParts.push(`Cement board ${cbBoards} board${cbBoards !== 1 ? "s" : ""} (£${cbSell.toFixed(2)})`);
+        if (levelBags > 0) inlineParts.push(`Levelling ${levelBags} bag${levelBags !== 1 ? "s" : ""} (£${levelSell.toFixed(2)})`);
+
+        const inline = inlineParts.length ? inlineParts.join(" · ") : "—";
+        const groutNote = groutBags > 0 ? ` (${parseFloat(groutKg.toFixed(1))}kg)` : "";
+
+        const roomTotal = parseFloat(room.total || 0);
+        return `
+            <tr class="qt-room-header">
+                <td>${esc(room.name)}<span class="qt-area-note">${totalArea.toFixed(2)}m²</span></td>
+                <td style="text-align:right">£${roomTotal.toFixed(2)}</td>
+            </tr>
+            <tr class="qt-mat-row">
+                <td class="qt-indent">Materials<span class="qt-detail">${esc(inline)}${groutNote}</span></td>
+                <td></td>
+            </tr>
+        `;
+    }).join("");
+
+    const roomScheduleHtml = (j.rooms || []).map(room => {
+        const surfaces = room.surfaces || [];
+        if (!surfaces.length) return "";
+
+        const ct        = room.tileSupply === "customer";
+        const totalArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+
+        let labourOpts = null;
+        if (room.labourType === "day") {
+            labourOpts = { type:"day", days: room.days || 1, dayRate: room.dayRate || settings.dayRate || 200, totalArea };
+        }
+
+        // Surface calcs already run above in roomBreakdownRows, but run again defensively
+        surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+
+                const adhBags   = surfaces.reduce((a, s) => a + (s.adhBags || 0), 0);
+        const groutBags = surfaces.reduce((a, s) => a + (s.groutBags || 0), 0);
+        const groutKg   = surfaces.reduce((a, s) => a + (s.groutKg || 0), 0);
+        const cbBoards  = surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
+        const levelBags = surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
+
+        const mult = 1 + (parseFloat(settings.markup) || 0) / 100;
+        const adhSell   = adhBags   * (parseFloat(settings.adhesivePrice) || 0) * mult;
+        const groutSell = groutBags * 2.5 * (parseFloat(settings.groutPrice) || 0) * mult;
+
+        const cbSell = surfaces.reduce((a, s) => {
+            if (s.type !== "floor" || !s.cementBoard) return a;
+            const rate = parseFloat(settings.cementBoard) || 18;
+            return a + (parseFloat(s.area) || 0) * rate;
+        }, 0);
+
+        const levelSell = surfaces.reduce((a, s) => {
+            if (s.type !== "floor" || !s.levelling) return a;
+            const depth = s.levelDepth || 2;
+            const rate  = depth === 3 ? (parseFloat(settings.level3) || 7)
+                        : depth === 4 ? (parseFloat(settings.level4) || 9)
+                        :               (parseFloat(settings.level2) || 5);
+            return a + (parseFloat(s.area) || 0) * rate;
+        }, 0);
+
+        const lines = [];
+        if (adhBags   > 0) lines.push(`<div class="qms-row"><span>Tile Adhesive</span><span>${adhBags} × 20kg bag${adhBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${adhSell.toFixed(2)}</span></span></div>`);
+        if (groutBags > 0) lines.push(`<div class="qms-row"><span>Grout</span><span>${groutBags} × 2.5kg bag${groutBags !== 1 ? "s" : ""} (${parseFloat(groutKg.toFixed(1))}kg) <span style="color:#6b7280">· £${groutSell.toFixed(2)}</span></span></div>`);
+        if (cbBoards  > 0) lines.push(`<div class="qms-row"><span>Cement Board</span><span>${cbBoards} board${cbBoards !== 1 ? "s" : ""} (0.96m² each) <span style="color:#6b7280">· £${cbSell.toFixed(2)}</span></span></div>`);
+        if (levelBags > 0) lines.push(`<div class="qms-row"><span>Levelling Compound</span><span>${levelBags} × 20kg bag${levelBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${levelSell.toFixed(2)}</span></span></div>`);
+
+        if (!lines.length) return "";
+
+        return `
+          <div style="margin-top:10px;">
+            <div class="qms-title" style="margin-bottom:6px;">${esc(room.name)}</div>
+            ${lines.join("")}
+          </div>
+        `;
+    }).join("");
 
     const subtotal = totalMats + totalLabour + totalPrep;
     const vatAmt   = applyVat ? subtotal * 0.2 : 0;
@@ -1108,6 +1221,13 @@ function renderQuote() {
             ${j.email ? `<br>${esc(j.email)}` : ""}
         </div>
 
+        ${roomBreakdownRows ? `
+        <table class="quote-table">
+            <tbody>
+                ${roomBreakdownRows}
+            </tbody>
+        </table>` : ""}
+
         <table class="quote-table">
             <tbody>
                 <tr><td>Materials</td><td style="text-align:right">£${totalMats.toFixed(2)}</td></tr>
@@ -1115,12 +1235,10 @@ function renderQuote() {
                 ${totalPrep > 0 ? `<tr><td>Preparation</td><td style="text-align:right">£${totalPrep.toFixed(2)}</td></tr>` : ""}
             </tbody>
         </table>
+
         <div class="quote-mat-schedule">
-            <div class="qms-title">Materials Schedule</div>
-            ${totalAdhBags   > 0 ? `<div class="qms-row"><span>Tile Adhesive</span><span>${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""}</span></div>` : ""}
-            ${totalGroutBags > 0 ? `<div class="qms-row"><span>Grout</span><span>${totalGroutBags} × 2.5kg bag${totalGroutBags !== 1 ? "s" : ""} (${parseFloat(totalGroutKg.toFixed(1))}kg total)</span></div>` : ""}
-            ${totalCBBoards  > 0 ? `<div class="qms-row"><span>Cement Board</span><span>${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""} (0.96m² each)</span></div>` : ""}
-            ${totalLevelBags > 0 ? `<div class="qms-row"><span>Levelling Compound</span><span>${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}</span></div>` : ""}
+            <div class="qms-title">Materials Schedule (per room)</div>
+            ${roomScheduleHtml || `<div style="color:#777;font-size:12px;">No material quantities to schedule.</div>`}
         </div>
 
         <div class="quote-totals">
