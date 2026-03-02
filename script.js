@@ -254,9 +254,10 @@ function renderJobView() {
         const lab        = surfaces.reduce((a, s) => a + (s.labour        || 0), 0);
         const prep       = surfaces.reduce((a, s) => a + (s.prepCost      || 0), 0);
         const ufh        = surfaces.reduce((a, s) => a + (s.ufhCost       || 0), 0);
-        const adhBags    = surfaces.reduce((a, s) => a + (s.adhBags       || 0), 0);
-        const groutBags  = surfaces.reduce((a, s) => a + (s.groutBags     || 0), 0);
+        const adhKg      = surfaces.reduce((a, s) => a + (s.adhKg         || 0), 0);
+        const adhBags    = Math.ceil(adhKg / 20);
         const groutKg    = surfaces.reduce((a, s) => a + (s.groutKg       || 0), 0);
+        const groutBags  = Math.ceil(groutKg / 2.5);
         const cbBoards   = surfaces.reduce((a, s) => a + (s.cementBoards  || 0), 0);
         const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
 
@@ -645,9 +646,10 @@ function calcSurface(s, customerTiles, labourOpts) {
     else if (maxDim <= 600) { adhKgM2 = 5.75; s.adhNotch = "10mm";  s.adhCat = "Standard Floor (300–600mm)";     s.backButter = false; }
     else                    { adhKgM2 = 7.0 * 1.175; s.adhNotch = "12mm+"; s.adhCat = "Large Format (>600mm) inc. back-butter"; s.backButter = true; }
     s.adhKgM2 = adhKgM2;
-    s.adhBags = Math.ceil((s.area * adhKgM2) / 20);
-
-    // Grout formula:
+    s.adhKg   = (s.area * adhKgM2);
+    s.adhBags = Math.max(0, Math.ceil(s.adhKg / 20)); // per-surface display only
+    s.adhBagsExact = (s.adhKg / 20); // for pro-rata costing
+// Grout formula:
     // A = tileW + tileH
     // B = jointWidth × tileThickness
     // C = A × B × 1.2
@@ -668,9 +670,10 @@ function calcSurface(s, customerTiles, labourOpts) {
     // Grout sold in 2.5kg bags — primary output
     s.groutBags = Math.ceil(totalGroutKg / 2.5);
 const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
-    // Price grout by bag quantity
-    const groutCost = s.groutBags * S.groutPrice;
-    const matRaw   = tileCost + groutCost + s.adhBags * S.adhesivePrice;
+    // Price adhesive/grout pro-rata by kg so multiple small surfaces don’t over-round
+    const groutCost = (totalGroutKg / 2.5) * S.groutPrice;
+    const adhCost   = (s.adhKg / 20) * S.adhesivePrice;
+    const matRaw    = tileCost + groutCost + adhCost;
     const mult     = 1 + S.markup / 100;
     s.materialSell = matRaw * mult;
 
@@ -843,9 +846,10 @@ function rmCalc() {
     const areaEl = document.getElementById("rm-area");
     if (areaEl) areaEl.textContent = areaParts.join("  ");
     // Aggregate bag/board quantities across all surfaces
-    const totalAdhBags    = surfaces.reduce((a, s) => a + (s.adhBags     || 0), 0);
-    const totalGroutBags  = surfaces.reduce((a, s) => a + (s.groutBags   || 0), 0);
+    const totalAdhKg      = surfaces.reduce((a, s) => a + (s.adhKg       || 0), 0);
+    const totalAdhBags    = Math.ceil(totalAdhKg / 20);
     const totalGroutKg    = surfaces.reduce((a, s) => a + (s.groutKg     || 0), 0);
+    const totalGroutBags  = Math.ceil(totalGroutKg / 2.5);
     const totalCBBoards   = surfaces.reduce((a, s) => a + (s.cementBoards|| 0), 0);
     const totalLevelBags  = surfaces.reduce((a, s) => a + (s.levelBags   || 0), 0);
 
@@ -925,7 +929,7 @@ function saveRoom() {
         total:       total.toFixed(2),
         ufh:         surfaces.some(s => s.ufh),
         tiles:       surfaces.reduce((a, s) => a + (s.tiles || 0), 0),
-        adhBags:     surfaces.reduce((a, s) => a + (s.adhBags || 0), 0),
+        adhBags:     Math.ceil(surfaces.reduce((a, s) => a + (s.adhKg || 0), 0) / 20),
         groutKg:     parseFloat(surfaces.reduce((a, s) => a + (s.groutKg || 0), 0).toFixed(1))
     };
 
@@ -1024,9 +1028,9 @@ function renderMaterials() {
     }
 
     // Recalculate all surfaces fresh
-    let grandTiles = 0, grandAdhBags = 0, grandAdhKg = 0;
-    let grandWallGroutBags = 0, grandWallGroutKg = 0;
-    let grandFloorGroutBags = 0, grandFloorGroutKg = 0;
+    let grandTiles = 0, grandAdhKg = 0;
+    let grandWallGroutKg = 0;
+    let grandFloorGroutKg = 0;
     let grandCBBoards = 0, grandLevelBags = 0;
     let hasUFH = false;
 
@@ -1048,15 +1052,12 @@ function renderMaterials() {
         const rows = surfaces.map(s => {
             const icon      = s.type === "floor" ? "⬜" : "🧱";
             const tileDesc  = `${s.tileW}×${s.tileH}mm`;
-            const adhKg     = (s.adhBags * 20).toFixed(0);
+            const adhKg     = (s.adhKg || 0).toFixed(0);
             grandTiles     += s.tiles     || 0;
-            grandAdhBags   += s.adhBags   || 0;
-            grandAdhKg     += s.adhBags * 20;
+            grandAdhKg     += (s.adhKg || 0);
             if (s.type === "wall") {
-                grandWallGroutBags += s.groutBags || 0;
                 grandWallGroutKg   += s.groutKg   || 0;
             } else {
-                grandFloorGroutBags += s.groutBags || 0;
                 grandFloorGroutKg   += s.groutKg   || 0;
             }
             if (s.cementBoards) grandCBBoards  += s.cementBoards;
@@ -1110,6 +1111,12 @@ function renderMaterials() {
     }).join("");
 
     // Grand totals
+
+    // Round bags ONCE at job level (prevents 5 small surfaces becoming 5 bags)
+    const grandAdhBags        = Math.ceil(grandAdhKg / 20);
+    const grandWallGroutBags  = Math.ceil(grandWallGroutKg / 2.5);
+    const grandFloorGroutBags = Math.ceil(grandFloorGroutKg / 2.5);
+
     const totalsHtml = `
     <div class="mat-totals-card">
         <div class="mat-totals-title">Job Totals</div>
@@ -1142,9 +1149,9 @@ function renderQuote() {
     const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
 
     let totalMats = 0, totalLabour = 0, totalPrep = 0;
-    let totalAdhBags = 0,
-        totalWallGroutBags = 0, totalWallGroutKg = 0,
-        totalFloorGroutBags = 0, totalFloorGroutKg = 0,
+    let totalAdhKg = 0,
+        totalWallGroutKg = 0,
+        totalFloorGroutKg = 0,
         totalCBBoards = 0, totalLevelBags = 0,
         totalSiliconeTubes = 0, totalSiliconeMetres = 0;
 
@@ -1168,19 +1175,18 @@ function renderQuote() {
         totalMats      += surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
         totalLabour    += surfaces.reduce((a, s) => a + (s.labour || 0) + (s.ufhCost || 0), 0);
         totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
-        totalAdhBags += surfaces.reduce((a, s) => a + (s.adhBags || 0), 0);
-        // Split grout totals wall vs floor
-        totalWallGroutBags += surfaces.filter(s=>s.type==='wall').reduce((a,s)=>a+(s.groutBags||0),0);
+        totalAdhKg        += surfaces.reduce((a, s) => a + (s.adhKg || 0), 0);
+        // Split grout totals wall vs floor (kg sums; bags rounded once below)
         totalWallGroutKg   += surfaces.filter(s=>s.type==='wall').reduce((a,s)=>a+(s.groutKg||0),0);
-        totalFloorGroutBags += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutBags||0),0);
-        totalFloorGroutKg   += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutKg||0),0);
+        totalFloorGroutKg  += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutKg||0),0);
         totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
         totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
 
         // Per-room quantities
-        const adhBags    = surfaces.reduce((a, s) => a + (s.adhBags || 0), 0);
-        const groutBags  = surfaces.reduce((a, s) => a + (s.groutBags || 0), 0);
+        const adhKg      = surfaces.reduce((a, s) => a + (s.adhKg || 0), 0);
+        const adhBags    = Math.ceil(adhKg / 20);
         const groutKg    = surfaces.reduce((a, s) => a + (s.groutKg || 0), 0);
+        const groutBags  = Math.ceil(groutKg / 2.5);
         const cbBoards   = surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
         const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
 
@@ -1274,11 +1280,17 @@ const roomTotal = parseFloat(room.total || 0);
 
 
     
-    // Whole-job adhesive & grout (calculated across all rooms)
+    // Whole-job adhesive & grout (kg summed across all rooms; bags rounded ONCE)
     const multJob = 1 + (parseFloat(settings.markup) || 0) / 100;
-    const jobAdhSell   = totalAdhBags   * (parseFloat(settings.adhesivePrice) || 0) * multJob;
-    const jobWallGroutSell  = totalWallGroutBags  * 2.5 * (parseFloat(settings.groutPrice) || 0) * multJob;
-    const jobFloorGroutSell = totalFloorGroutBags * 2.5 * (parseFloat(settings.groutPrice) || 0) * multJob;
+
+    const totalAdhBags        = Math.ceil(totalAdhKg / 20);
+    const totalWallGroutBags  = Math.ceil(totalWallGroutKg / 2.5);
+    const totalFloorGroutBags = Math.ceil(totalFloorGroutKg / 2.5);
+
+    const jobAdhSell        = totalAdhBags * (parseFloat(settings.adhesivePrice) || 0) * multJob;
+    const jobWallGroutSell  = totalWallGroutBags * (parseFloat(settings.groutPrice) || 0) * multJob;
+    const jobFloorGroutSell = totalFloorGroutBags * (parseFloat(settings.groutPrice) || 0) * multJob;
+
     const totalGroutBags = totalWallGroutBags + totalFloorGroutBags;
     const totalGroutKg   = totalWallGroutKg   + totalFloorGroutKg;
 
@@ -1425,10 +1437,25 @@ function exportFreeAgent() {
 
 /* ─── PDF ─── */
 function downloadPDF() {
+    // jsPDF comes from a CDN. If blocked/offline, fail gracefully.
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        console.error("jsPDF library not available. window.jspdf:", window.jspdf);
+        alert("PDF generator didn't load (jsPDF).\n\nCheck you are online and that any ad/script blockers aren't blocking cdnjs. Then refresh and try again.");
+        return;
+    }
+
     const { jsPDF } = window.jspdf;
     const j = getJob();
     const applyVat = document.getElementById("q-vat").value === "true";
-    const doc = new jsPDF({ unit:"mm", format:"a4" });
+
+    let doc;
+    try {
+        doc = new jsPDF({ unit:"mm", format:"a4" });
+    } catch (err) {
+        console.error("Failed to initialise jsPDF", err);
+        alert("Couldn't start the PDF generator. Open DevTools (F12) → Console and share the error.");
+        return;
+    }
 
     const amber = [230, 175, 46];
     const dark  = [30, 35, 40];
@@ -1536,5 +1563,15 @@ function downloadPDF() {
         doc.text(settings.terms, 14, y, { maxWidth: W - 28 });
     }
 
-    doc.save(`${j.customerName.replace(/\s+/g,"-")}-quote.pdf`);
+    const safeName = (j.customerName || "quote")
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/(^-|-$)/g, "");
+
+    // Try save, but catch any unexpected PDF errors
+    try {
+        doc.save(`${safeName || "quote"}-quote.pdf`);
+    } catch (err) {
+        console.error("PDF save failed", err);
+        alert("PDF save failed. Open DevTools (F12) → Console and share the error.");
+    }
 }
