@@ -1,42 +1,30 @@
-export const config = { runtime: "nodejs" };
+export default async function handler(req,res){
+  if(req.method !== 'POST') return res.status(405).json({error:'Method not allowed'});
 
-export default async function handler(req, res) {
-  try {
-    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if(!process.env.ANTHROPIC_API_KEY){
+    return res.status(500).json({error:'Missing ANTHROPIC_API_KEY'});
+  }
 
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) return res.status(500).json({ error: "Missing ANTHROPIC_API_KEY on server (Vercel env var)." });
-
-    const { style = "Professional", customerName = "", rooms = "" } = req.body || {};
-
-    const prompt =
-      `Write a single short paragraph (60-90 words) describing the scope of work for a tiling job quote. ` +
-      `Style: ${style}. Customer: ${customerName}. Rooms: ${rooms}. ` +
-      `Use UK English, third person, professional tone.`;
-
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01"
+  try{
+    const { prompt } = req.body || {};
+    const r = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version":"2023-06-01",
+        "content-type":"application/json"
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-latest",
-        max_tokens: 220,
-        messages: [{ role: "user", content: prompt }]
+        model: process.env.ANTHROPIC_MODEL || "claude-3-sonnet-20240229",
+        max_tokens: 350,
+        messages: [{ role:"user", content: String(prompt || "Write a short tiling job description.") }]
       })
     });
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const msg = data?.error?.message || data?.message || "Anthropic API error";
-      return res.status(r.status).json({ error: msg, raw: data });
-    }
-
-    const text = data?.content?.[0]?.text || "";
-    return res.status(200).json({ text });
-  } catch (e) {
-    return res.status(500).json({ error: e?.message || "Server error" });
+    const data = await r.json();
+    if(!r.ok) return res.status(r.status).json(data);
+    return res.status(200).json(data);
+  }catch(e){
+    return res.status(500).json({error: e?.message || "Server error"});
   }
 }
