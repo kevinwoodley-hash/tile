@@ -451,6 +451,7 @@
             </div>
             <div id="deduct-f-manual" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
             <div id="deduct-f-total" style="display:none;font-size:12px;color:#c00;font-weight:600;margin-bottom:8px;"></div>
+            <input id="rm-f-deduct" type="hidden" value="0">
             <div class="divider-label">Tile</div>
             <div class="field-row">
                 <div class="field-group">
@@ -520,6 +521,8 @@
                 <label class="deduct-chip"><input type="checkbox" value="bathend2" onchange="updateDeductTotals()">🛁 Bath End 2<br><small>0.7x0.7m</small></label>
                 <label class="deduct-chip deduct-chip-manual" onclick="addManualDeduct(event)">✏ Custom<br><small>enter size</small></label>
             </div>
+            <div id="deduct-w-manual" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+            <input id="rm-w-deduct" type="hidden" value="0">
             <div class="divider-label">Tile</div>
             <div class="field-row">
                 <div class="field-group">

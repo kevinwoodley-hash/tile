@@ -36,6 +36,16 @@ let currentJobId    = null;   // id of job currently open
 let currentRoomIdx  = null;   // null = new room, number = editing existing
 let currentSurfType   = "room";  // "room" | "floor" | "wall"
 let currentLabourType = "m2";    // "m2" | "day"
+let currentQuoteRef   = null;   // generated once per goQuote() call
+
+/* Deduction preset dimensions */
+const DEDUCT_PRESETS = {
+    door:      { w: 0.7, h: 1.9, label: "Door",      floor: false },
+    bathwall:  { w: 1.7, h: 0.6, label: "Bath Wall",  floor: false },
+    bathend1:  { w: 0.7, h: 0.7, label: "Bath End",   floor: false },
+    bathend2:  { w: 0.7, h: 0.7, label: "Bath End 2", floor: false },
+    bathfloor: { w: 1.7, h: 0.7, label: "Bath Floor", floor: true  },
+};
 
 /* ─── HELPERS ────────────────────────────────────────────────── */
 function show(id) {
@@ -285,7 +295,6 @@ function renderJobView() {
         grandSiliconeTubes  += seal.tubes;
         grandSiliconeMetres += seal.metres;
         grandSiliconeFloor  += (seal.floor || 0);
-        grandSiliconeFloor  += (seal.floor || 0);
         const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span> <span style="color:#6b7280">· Floor perimeter bead ${seal.floor}m</span></div>` : "";
 
         return `
@@ -470,6 +479,7 @@ function clearRoomInputs() {
     document.getElementById("rm-r-wgrout").value = 2;
     document.getElementById("rm-r-ftilew").value = 600;
     document.getElementById("rm-r-ftileh").value = 600;
+    document.getElementById("rm-r-ftilethick").value = 10;
     document.getElementById("rm-r-fgrout").value = 2;
     document.getElementById("rm-r-deduct").value = 0;
     document.getElementById("rm-f-tilew").value  = 600;
@@ -480,6 +490,8 @@ function clearRoomInputs() {
     document.getElementById("rm-w-tilethick").value = 8;
     document.getElementById("rm-w-tileh").value  = 600;
     document.getElementById("rm-w-grout").value  = 2;
+    // Uncheck all preset deduction chips
+    document.querySelectorAll(".deduct-chip input[type=checkbox]").forEach(cb => cb.checked = false);
 }
 
 /* Restore fields when editing an existing room */
@@ -758,21 +770,59 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
 let wallDeducts  = [];
 let floorDeducts = [];
 
-function addDeduct(w, h, label, mode) {
-    if (mode === "manual" || mode === "floor-manual") {
-        const wStr = prompt("Width (m):", "");
-        const hStr = prompt("Height (m):", "");
-        if (!wStr || !hStr) return;
-        w = parseFloat(wStr) || 0;
-        h = parseFloat(hStr) || 0;
-        const custom = prompt("Label:", label.replace("-manual","") || "Opening");
-        label = custom || label;
+/* Called by preset chip checkboxes in full-room mode */
+function toggleDeductChip(cb) {
+    const p = DEDUCT_PRESETS[cb.value];
+    if (!p) return;
+    const arr = p.floor ? floorDeducts : wallDeducts;
+    if (cb.checked) {
+        arr.push({ label: p.label, w: p.w, h: p.h, m2: parseFloat((p.w * p.h).toFixed(3)) });
+    } else {
+        const i = arr.findIndex(d => d.label === p.label && d.w === p.w && d.h === p.h);
+        if (i !== -1) arr.splice(i, 1);
     }
-    const m2 = parseFloat((w * h).toFixed(3));
-    if (m2 <= 0) return;
+    renderDeducts();
+    rmCalc();
+}
 
-    const isFloor = mode === "floor" || mode === "floor-manual";
-    if (isFloor) {
+/* Called by preset chip checkboxes in floor-only / wall-only modes */
+function updateDeductTotals() {
+    const presetEntries = Object.values(DEDUCT_PRESETS);
+
+    if (currentSurfType === "floor") {
+        const manuals = floorDeducts.filter(d => !presetEntries.some(p => p.label === d.label && p.w === d.w && p.h === d.h));
+        const newPresets = [];
+        document.querySelectorAll("#rm-form-floor input[type=checkbox][value]").forEach(cb => {
+            const p = DEDUCT_PRESETS[cb.value];
+            if (p && cb.checked) newPresets.push({ label: p.label, w: p.w, h: p.h, m2: parseFloat((p.w * p.h).toFixed(3)) });
+        });
+        floorDeducts = [...newPresets, ...manuals];
+    } else if (currentSurfType === "wall") {
+        const manuals = wallDeducts.filter(d => !presetEntries.some(p => p.label === d.label && p.w === d.w && p.h === d.h));
+        const newPresets = [];
+        document.querySelectorAll("#rm-form-wall input[type=checkbox][value]").forEach(cb => {
+            const p = DEDUCT_PRESETS[cb.value];
+            if (p && cb.checked) newPresets.push({ label: p.label, w: p.w, h: p.h, m2: parseFloat((p.w * p.h).toFixed(3)) });
+        });
+        wallDeducts = [...newPresets, ...manuals];
+    }
+    renderDeducts();
+    rmCalc();
+}
+
+/* Called by the ✏ Custom chip in any mode */
+function addManualDeduct(event) {
+    event.preventDefault();
+    const wStr = prompt("Width (m):", "");
+    if (wStr === null) return;
+    const hStr = prompt("Height (m):", "");
+    if (hStr === null) return;
+    const w = parseFloat(wStr);
+    const h = parseFloat(hStr);
+    if (!w || !h || w <= 0 || h <= 0) { alert("Invalid dimensions."); return; }
+    const label = prompt("Label:", "Opening") || "Opening";
+    const m2 = parseFloat((w * h).toFixed(3));
+    if (currentSurfType === "floor") {
         floorDeducts.push({ label, w, h, m2 });
     } else {
         wallDeducts.push({ label, w, h, m2 });
@@ -789,40 +839,44 @@ function removeDeduct(idx, isFloor) {
 }
 
 function renderDeducts() {
-    const wallTag = (d, i) => `
-        <div class="deduct-tag">
-            <span>${d.label} (${d.w}×${d.h}m = ${d.m2}m²)</span>
-            <button onclick="removeDeduct(${i}, false)" class="deduct-remove">×</button>
-        </div>`;
-    const floorTag = (d, i) => `
-        <div class="deduct-tag">
-            <span>${d.label} (${d.w}×${d.h}m = ${d.m2}m²)</span>
-            <button onclick="removeDeduct(${i}, true)" class="deduct-remove">×</button>
-        </div>`;
-
-    const wallHtml  = wallDeducts.map(wallTag).join("");
-    const floorHtml = floorDeducts.map(floorTag).join("");
-
-    // Update all containers that show wall deductions
-    ["deduct-items", "deduct-wall-items-w"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = wallHtml;
-    });
-    // Update all containers that show floor deductions
-    ["deduct-floor-items", "deduct-floor-items-f"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = floorHtml;
-    });
-
-    // Sync hidden inputs for all modes
     const wallTotal  = wallDeducts.reduce((a, d) => a + d.m2, 0);
     const floorTotal = floorDeducts.reduce((a, d) => a + d.m2, 0);
-    ["rm-r-deduct", "rm-w-deduct"].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = wallTotal;
-    });
-    ["rm-r-fdeduct", "rm-f-deduct"].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = floorTotal;
-    });
+
+    const wallTag  = (d, i) => `<div class="deduct-tag"><span>${d.label} (${d.w}×${d.h}m = ${d.m2}m²)</span><button onclick="removeDeduct(${i}, false)" class="deduct-remove">×</button></div>`;
+    const floorTag = (d, i) => `<div class="deduct-tag"><span>${d.label} (${d.w}×${d.h}m = ${d.m2}m²)</span><button onclick="removeDeduct(${i}, true)" class="deduct-remove">×</button></div>`;
+
+    // Full-room: manual wall deducts list
+    const manualEl = document.getElementById("deduct-manual-items");
+    if (manualEl) manualEl.innerHTML = wallDeducts.map(wallTag).join("");
+
+    // Full-room: wall total badge & line
+    const totalBadge = document.getElementById("deduct-total-badge");
+    const totalLine  = document.getElementById("deduct-total-line");
+    if (totalBadge) {
+        totalBadge.style.display = wallTotal > 0 ? "" : "none";
+        totalBadge.textContent = `-${wallTotal.toFixed(2)}m²`;
+    }
+    if (totalLine) {
+        totalLine.style.display = wallTotal > 0 ? "" : "none";
+        totalLine.textContent = `Wall deductions total: ${wallTotal.toFixed(2)} m²`;
+    }
+
+    // Floor-only: manual floor deducts list + total
+    const fManualEl = document.getElementById("deduct-f-manual");
+    if (fManualEl) fManualEl.innerHTML = floorDeducts.map(floorTag).join("");
+    const fTotalEl = document.getElementById("deduct-f-total");
+    if (fTotalEl) {
+        fTotalEl.style.display = floorTotal > 0 ? "" : "none";
+        fTotalEl.textContent = `Floor deductions total: ${floorTotal.toFixed(2)} m²`;
+    }
+
+    // Wall-only: manual wall deducts list
+    const wManualEl = document.getElementById("deduct-w-manual");
+    if (wManualEl) wManualEl.innerHTML = wallDeducts.map(wallTag).join("");
+
+    // Sync hidden inputs
+    ["rm-r-deduct", "rm-w-deduct"].forEach(id => { const el = document.getElementById(id); if (el) el.value = wallTotal; });
+    ["rm-r-fdeduct", "rm-f-deduct"].forEach(id => { const el = document.getElementById(id); if (el) el.value = floorTotal; });
 }
 
 function clearDeducts() {
@@ -1012,6 +1066,8 @@ function saveSettings() {
         markup:        parseFloat(document.getElementById("set-markup").value)         || 20,
         labourMarkup:  document.getElementById("set-labour-markup").value === "true",
         labourM2:      parseFloat(document.getElementById("set-labour-m2").value)      || 32,
+        labourM2Wall:  35,
+        labourM2Floor: 28,
         dayRate:       parseFloat(document.getElementById("set-day-rate").value)       || 200,
         cementBoard:   parseFloat(document.getElementById("set-cementboard").value)    || 18,
         membrane:      parseFloat(document.getElementById("set-membrane").value)       || 8,
@@ -1038,6 +1094,7 @@ function goQuote() {
         alert("Add at least one room before generating a quote.");
         return;
     }
+    currentQuoteRef = "Q" + Date.now().toString().slice(-6);
     document.getElementById("q-vat").value    = settings.applyVat !== false ? "true" : "false";
     document.getElementById("q-expiry").value = 30;
     document.getElementById("ai-box").innerHTML = "";
@@ -1177,7 +1234,7 @@ function renderQuote() {
     const co      = settings.companyName  || "Your Tiling Company";
     const phone   = settings.companyPhone || "";
     const email   = settings.companyEmail || "";
-    const quoteRef = "Q" + Date.now().toString().slice(-6);
+    const quoteRef = currentQuoteRef || ("Q" + Date.now().toString().slice(-6));
 
     const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
 
@@ -1533,7 +1590,7 @@ function downloadPDF() {
     if (settings.companyPhone) doc.text(settings.companyPhone, 14, 19);
     if (settings.companyEmail) doc.text(settings.companyEmail, 14, 24);
 
-    const quoteRef = "Q" + Date.now().toString().slice(-6);
+    const quoteRef = currentQuoteRef || ("Q" + Date.now().toString().slice(-6));
     doc.setTextColor(...amber);
     doc.setFontSize(11);
     doc.text(quoteRef, W - 14, 12, { align:"right" });
@@ -1587,6 +1644,15 @@ function downloadPDF() {
             doc.text(`£${cost.toFixed(2)}`, W - 14, y, { align:"right" });
             y += 5;
         });
+        const extraCost = parseFloat(room.extraWorkCost || 0);
+        if (extraCost > 0) {
+            doc.setFont("helvetica","normal");
+            doc.setTextColor(...mid);
+            doc.text(`  ${room.extraWorkDesc || "Extra work"}`, 17, y);
+            doc.text(`£${extraCost.toFixed(2)}`, W - 14, y, { align:"right" });
+            subtotal += extraCost;
+            y += 5;
+        }
         y += 2;
     });
 
