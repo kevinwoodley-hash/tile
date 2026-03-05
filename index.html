@@ -297,6 +297,13 @@
                         <option value="false">No</option>
                     </select>
                 </div>
+
+                <div class="field-group">
+                    <label>Sealant for floor perimeter</label>
+                    <input id="rm-sealant-floorperim" type="checkbox" checked onchange="rmCalc()">
+                    <div class="small-note" style="margin-top:4px;">Adds 2×(L+W) once per room.</div>
+                </div>
+
                 <div class="field-group">
                     <label>Bath/Tray perimeter (m)</label>
                     <input id="rm-sealant-bath" type="number" step="0.01" placeholder="e.g. 5.0" oninput="rmCalc()">
@@ -311,7 +318,19 @@
                 </div>
             </div>
             <div class="small-note" style="margin-top:-6px;">
-                Uses room perimeter (2×(L+W)) + bath/tray perimeter + (external corners × room height) − deductions. Perimeter is counted once per room (no double-up).
+                Uses (optional) floor perimeter + bath/tray perimeter + (external corners × room height) − deductions. Floor perimeter is counted once per room (no double-up).
+            </div>
+
+            <div class="divider-label">Extra Work</div>
+            <div class="field-row">
+                <div class="field-group" style="flex:2;">
+                    <label>Description</label>
+                    <input id="rm-extra-desc" type="text" placeholder="e.g. Remove & refit toilet" oninput="rmCalc()">
+                </div>
+                <div class="field-group" style="flex:1;">
+                    <label>Cost (£)</label>
+                    <input id="rm-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
+                </div>
             </div>
 
             <div class="divider-label">Deductions <span id="deduct-total-badge" style="background:#c00;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:6px;display:none;"></span></div>

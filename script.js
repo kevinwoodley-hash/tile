@@ -52,29 +52,39 @@ function uid()     { return Date.now().toString(36) + Math.random().toString(36)
 
 /* ─── SEALANT (silicone) ───────────────────────────────────────
    Calculated per room to avoid double-counting walls/surfaces.
-   Metres = 2×(L+W) + bath/tray perimeter + (external corners × room height) − deductions
+   Metres = (include floor perimeter ? 2×(L+W) : 0) + bath/tray perimeter + (external corners × room height) − deductions
    Tubes  = ceil(metres / settings.siliconeCoverage)
 -----------------------------------------------------------------*/
 function calcSealantRoom(room) {
-    if (!room || room.sealantEnabled === false) return { metres: 0, tubes: 0 };
+    if (!room || room.sealantEnabled === false) {
+        return { metres: 0, tubes: 0, floor: 0, bath: 0, corners: 0, deduct: 0 };
+    }
 
     const L = parseFloat(room.length) || 0;
     const W = parseFloat(room.width)  || 0;
     const H = parseFloat(room.height) || 0;
 
-    const bath   = parseFloat(room.sealantBathPerim) || 0;
-    const deduct = parseFloat(room.sealantDeduct)    || 0;
-    const corners = parseInt(room.sealantCorners)    || 0;
+    const bathRaw    = parseFloat(room.sealantBathPerim) || 0;   // m
+    const deductRaw  = parseFloat(room.sealantDeduct)    || 0;   // m
+    const cornersCnt = parseInt(room.sealantCorners)     || 0;
 
-    const perimeter = (L > 0 && W > 0) ? 2 * (L + W) : 0;
-    const cornerMetres = (corners > 0 && H > 0) ? (corners * H) : 0;
+    const includeFloorPerim = (room.sealantFloorPerim !== false);
+    const floorRaw   = (includeFloorPerim && L > 0 && W > 0) ? 2 * (L + W) : 0;
+    const cornersRaw = (cornersCnt > 0 && H > 0) ? (cornersCnt * H) : 0;
 
-    const metresRaw = Math.max(0, perimeter + bath + cornerMetres - deduct);
+    const metresRaw = Math.max(0, floorRaw + bathRaw + cornersRaw - deductRaw);
     const coverage  = parseFloat(settings.siliconeCoverage) || 6;
 
     const tubes = metresRaw > 0 ? Math.ceil(metresRaw / coverage) : 0;
 
-    return { metres: parseFloat(metresRaw.toFixed(1)), tubes };
+    // round components for display
+    const floor   = parseFloat(floorRaw.toFixed(1));
+    const bath    = parseFloat(bathRaw.toFixed(1));
+    const corners = parseFloat(cornersRaw.toFixed(1));
+    const deduct  = parseFloat(deductRaw.toFixed(1));
+    const metres  = parseFloat(metresRaw.toFixed(1));
+
+    return { metres, tubes, floor, bath, corners, deduct };
 }
 
 function statusBadge(s) {
@@ -225,6 +235,9 @@ function renderJobView() {
 
     emptyEl.style.display = "none";
 
+    // Sealant totals (used for display; avoids double-counting walls)
+    let grandSiliconeTubes = 0, grandSiliconeMetres = 0, grandSiliconeFloor = 0;
+
     roomsEl.innerHTML = rooms.map((r, i) => {
         const surfaces = r.surfaces || [];
 
@@ -271,7 +284,9 @@ function renderJobView() {
         const seal = calcSealantRoom(r);
         grandSiliconeTubes  += seal.tubes;
         grandSiliconeMetres += seal.metres;
-        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span></div>` : "";
+        grandSiliconeFloor  += (seal.floor || 0);
+        grandSiliconeFloor  += (seal.floor || 0);
+        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span> <span style="color:#6b7280">· Floor perimeter bead ${seal.floor}m</span></div>` : "";
 
         return `
         <div class="room-card">
@@ -435,6 +450,9 @@ function clearRoomInputs() {
     const sb = document.getElementById("rm-sealant-bath"); if (sb) sb.value = "";
     const sd = document.getElementById("rm-sealant-deduct"); if (sd) sd.value = "";
     const sc = document.getElementById("rm-sealant-corners"); if (sc) sc.value = "";
+    const sf = document.getElementById("rm-sealant-floorperim"); if (sf) sf.checked = true;
+    const exd = document.getElementById("rm-extra-desc"); if (exd) exd.value = "";
+    const exc = document.getElementById("rm-extra-cost"); if (exc) exc.value = "";
     document.getElementById("rm-f-ufh").checked       = false;
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
@@ -477,6 +495,11 @@ function restoreRoomInputs(room) {
     set("rm-sealant-bath", room.sealantBathPerim || "");
     set("rm-sealant-deduct", room.sealantDeduct || "");
     set("rm-sealant-corners", room.sealantCorners || "");
+    const sf = document.getElementById("rm-sealant-floorperim"); if (sf) sf.checked = (room.sealantFloorPerim !== false);
+
+    // Extra work
+    set("rm-extra-desc", room.extraWorkDesc || "");
+    set("rm-extra-cost", (room.extraWorkCost || room.extraWorkCost === 0) ? room.extraWorkCost : "");
 
     if (currentSurfType === "room") {
         if ((room.length||0) > 0 && (room.width||0) > 0 && (room.height||0) > 0) {
@@ -830,7 +853,8 @@ function rmCalc() {
 
     surfaces.forEach(s => calcSurface(s, ct, labourOpts));
 
-    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0);
+    const extraCost = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraCost;
     const mats  = surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
     const lab   = surfaces.reduce((a, s) => a + (s.labour || 0), 0);
     const ufh   = surfaces.reduce((a, s) => a + (s.ufhCost || 0), 0);
@@ -867,6 +891,7 @@ function rmCalc() {
     if (totalCBBoards  > 0) parts.push(`Cement Board: ${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""}`);
     if (totalLevelBags > 0) parts.push(`Levelling: ${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}`);
     if (prep > 0 && totalCBBoards === 0 && totalLevelBags === 0) parts.push(`Prep £${prep.toFixed(2)}`);
+    if (extraCost > 0) parts.push(`Extra work £${extraCost.toFixed(2)}`);
     document.getElementById("rm-breakdown").innerHTML =
         parts.map(p => `<span class="breakdown-item">${p}</span>`).join(" · ");
 }
@@ -892,8 +917,11 @@ function saveRoom() {
 
     surfaces.forEach(s => calcSurface(s, ct, labourOpts));
 
+    const extraWorkDesc = (document.getElementById("rm-extra-desc")?.value || "").trim();
+    const extraWorkCost = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
+
     const area       = parseFloat(totalArea.toFixed(2));
-    const total      = surfaces.reduce((a, s) => a + parseFloat(s.total), 0);
+    const total      = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraWorkCost;
     const floorCount = surfaces.filter(s => s.type === "floor").length;
     const wallCount  = surfaces.filter(s => s.type === "wall").length;
     const type = floorCount && wallCount ? "floor + walls" : wallCount ? "wall" : "floor";
@@ -903,6 +931,7 @@ function saveRoom() {
     const roomHei = parseFloat(document.getElementById("rm-r-height")?.value) || 0;
 
     const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
+    const sealantFloorPerim = document.getElementById("rm-sealant-floorperim")?.checked !== false;
     const sealantBathPerim = parseFloat(document.getElementById("rm-sealant-bath")?.value) || 0;
     const sealantDeduct    = parseFloat(document.getElementById("rm-sealant-deduct")?.value) || 0;
     const sealantCorners   = parseInt(document.getElementById("rm-sealant-corners")?.value) || 0;
@@ -913,9 +942,12 @@ function saveRoom() {
         width:  roomWid || undefined,
         height: roomHei || undefined,
         sealantEnabled,
+        sealantFloorPerim,
         sealantBathPerim,
         sealantDeduct,
         sealantCorners,
+        extraWorkDesc: extraWorkDesc || undefined,
+        extraWorkCost: extraWorkCost || 0,
         wallDeducts: wallDeducts.slice(),
         floorDeducts: floorDeducts.slice(),
         savedType:   currentSurfType,
@@ -1020,6 +1052,7 @@ function goMaterials() {
 }
 
 function renderMaterials() {
+    let grandSiliconeTubes = 0, grandSiliconeMetres = 0, grandSiliconeFloor = 0;
     const j = getJob();
     const rooms = j.rooms || [];
     if (!rooms.length) {
@@ -1088,7 +1121,7 @@ function renderMaterials() {
         const seal = calcSealantRoom(room);
         grandSiliconeTubes  += seal.tubes;
         grandSiliconeMetres += seal.metres;
-        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span></div>` : "";
+        const sealLine = seal.tubes > 0 ? `<div style="margin-top:4px;font-size:12px;color:#555;">Sealant: <strong>${seal.tubes}</strong> tube${seal.tubes!==1?"s":""} <span style="color:#6b7280">· ${seal.metres}m</span> <span style="color:#6b7280">· Floor perimeter bead ${seal.floor}m</span></div>` : "";
 
         return `
         <div class="mat-room-block">
@@ -1124,7 +1157,7 @@ function renderMaterials() {
             <div class="mat-total-item"><span class="mat-total-label">Tiles</span><span class="mat-total-value">${grandTiles}</span></div>
             <div class="mat-total-item"><span class="mat-total-label">Adhesive</span><span class="mat-total-value">${grandAdhBags} × 20kg<br><span style="font-size:11px;font-weight:400;">${grandAdhKg.toFixed(0)}kg total</span></span></div>
             <div class="mat-total-item"><span class="mat-total-label">Grout</span><span class="mat-total-value">Wall: ${grandWallGroutBags} × 2.5kg<br>Floor: ${grandFloorGroutBags} × 2.5kg<br><span style="font-size:11px;font-weight:600;">Total: ${grandWallGroutBags + grandFloorGroutBags} bag${(grandWallGroutBags + grandFloorGroutBags)!==1?"s":""}</span></span></div>
-            ${grandSiliconeTubes > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Sealant</span><span class="mat-total-value">${grandSiliconeTubes} tube${grandSiliconeTubes!==1?"s":""}<br><span style="font-size:11px;font-weight:400;">${grandSiliconeMetres.toFixed(1)}m total</span></span></div>` : ""}
+            ${grandSiliconeTubes > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Sealant</span><span class="mat-total-value">${grandSiliconeTubes} tube${grandSiliconeTubes!==1?"s":""}<br><span style="font-size:11px;font-weight:400;">${grandSiliconeMetres.toFixed(1)}m total</span><br><span style="font-size:11px;font-weight:400;">Floor perimeter bead: ${grandSiliconeFloor.toFixed(1)}m</span></span></div>` : ""}
             ${grandCBBoards  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Cement Board</span><span class="mat-total-value">${grandCBBoards} board${grandCBBoards!==1?"s":""}</span></div>` : ""}
             ${grandLevelBags > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Levelling</span><span class="mat-total-value">${grandLevelBags} × 20kg bag${grandLevelBags!==1?"s":""}</span></div>` : ""}
         </div>
@@ -1148,12 +1181,12 @@ function renderQuote() {
 
     const addr = [j.address, j.city, j.postcode].filter(Boolean).join(", ");
 
-    let totalMats = 0, totalLabour = 0, totalPrep = 0;
+    let totalMats = 0, totalLabour = 0, totalPrep = 0, totalExtras = 0;
     let totalAdhKg = 0,
         totalWallGroutKg = 0,
         totalFloorGroutKg = 0,
         totalCBBoards = 0, totalLevelBags = 0,
-        totalSiliconeTubes = 0, totalSiliconeMetres = 0;
+        totalSiliconeTubes = 0, totalSiliconeMetres = 0, totalSiliconeFloor = 0;
 
     // Per-room breakdown + per-room material schedule
     const roomBreakdownRows = (j.rooms || []).map(room => {
@@ -1175,12 +1208,19 @@ function renderQuote() {
         totalMats      += surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
         totalLabour    += surfaces.reduce((a, s) => a + (s.labour || 0) + (s.ufhCost || 0), 0);
         totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
+        totalExtras    += parseFloat(room.extraWorkCost || 0);
         totalAdhKg        += surfaces.reduce((a, s) => a + (s.adhKg || 0), 0);
         // Split grout totals wall vs floor (kg sums; bags rounded once below)
         totalWallGroutKg   += surfaces.filter(s=>s.type==='wall').reduce((a,s)=>a+(s.groutKg||0),0);
         totalFloorGroutKg  += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutKg||0),0);
         totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
         totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
+
+        // Sealant (per room, perimeter-based; no wall double-counting)
+        const seal = calcSealantRoom(room);
+        totalSiliconeTubes  += seal.tubes;
+        totalSiliconeMetres += seal.metres;
+        totalSiliconeFloor  += (seal.floor || 0);
 
         // Per-room quantities
         const adhKg      = surfaces.reduce((a, s) => a + (s.adhKg || 0), 0);
@@ -1216,6 +1256,8 @@ function renderQuote() {
 if (cbBoards  > 0) inlineParts.push(`Cement board ${cbBoards} board${cbBoards !== 1 ? "s" : ""} (£${cbSell.toFixed(2)})`);
         if (levelBags > 0) inlineParts.push(`Levelling ${levelBags} bag${levelBags !== 1 ? "s" : ""} (£${levelSell.toFixed(2)})`);
 
+        const extraDesc = (room.extraWorkDesc || "").trim();
+        const extraCost = parseFloat(room.extraWorkCost || 0);
         const inline = inlineParts.length ? inlineParts.join(" · ") : "—";
 const roomTotal = parseFloat(room.total || 0);
         return `
@@ -1227,6 +1269,12 @@ const roomTotal = parseFloat(room.total || 0);
                 <td class="qt-indent">Materials<span class="qt-detail">${esc(inline)}</span></td>
                 <td></td>
             </tr>
+            ${extraCost > 0 ? `
+            <tr class="qt-mat-row">
+                <td class="qt-indent">Extra work<span class="qt-detail">${esc(extraDesc || "Extra work")}</span></td>
+                <td style="text-align:right">£${extraCost.toFixed(2)}</td>
+            </tr>
+            ` : ""}
         `;
     }).join("");
 
@@ -1301,7 +1349,7 @@ const roomTotal = parseFloat(room.total || 0);
     
     const jobSilBase = totalSiliconeTubes * (parseFloat(settings.siliconePrice) || 0);
     const jobSilSell = jobSilBase * (1 + (parseFloat(settings.markup) || 0) / 100);
-    if (totalSiliconeTubes > 0) jobScheduleLines.push(`<div class="qms-row"><span>Sealant (whole job)</span><span>${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobSilSell.toFixed(2)}</span></span></div>`);
+    if (totalSiliconeTubes > 0) jobScheduleLines.push(`<div class="qms-row"><span>Sealant (whole job)</span><span>${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""} <span style="color:#6b7280">· Floor perimeter bead ${totalSiliconeFloor.toFixed(1)}m</span> <span style="color:#6b7280">· £${jobSilSell.toFixed(2)}</span></span></div>`);
     const jobScheduleHtml = jobScheduleLines.length ? `
       <div style="margin-top:10px;">
         <div class="qms-title" style="margin-bottom:6px;">Whole job</div>
@@ -1309,7 +1357,7 @@ const roomTotal = parseFloat(room.total || 0);
       </div>
     ` : "";
 
-const subtotal = totalMats + totalLabour + totalPrep;
+const subtotal = totalMats + totalLabour + totalPrep + totalExtras;
     const vatAmt   = applyVat ? subtotal * 0.2 : 0;
     const grand    = subtotal + vatAmt;
 
@@ -1369,31 +1417,42 @@ async function generateAI() {
     const j     = getJob();
     const style = document.getElementById("ai-style").value;
     const box   = document.getElementById("ai-box");
+
     const rooms = (j.rooms || []).map(r =>
         `${r.name}: ${r.type}, ${r.area} m², £${r.total}`
     ).join("; ");
 
     box.innerHTML = `<div class="ai-loading">✨ Generating…</div>`;
+
     try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
+        const resp = await fetch("/api/ai-description", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 200,
-                messages: [{
-                    role: "user",
-                    content: `Write a single short paragraph (60-90 words) describing the scope of work for a tiling job quote. Style: ${style}. Customer: ${j.customerName}. Rooms: ${rooms}. Use UK English, third person, professional tone.`
-                }]
+                style,
+                customerName: j.customerName || "",
+                rooms,
             })
         });
-        const data = await res.json();
-        const text = data.content?.[0]?.text || "Could not generate description.";
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+            const msg = data?.error || `AI request failed (${resp.status})`;
+            console.error("AI description error:", msg, data);
+            box.innerHTML = `<div class="ai-result">Error generating description: ${esc(msg)}</div>`;
+            return;
+        }
+
+        const text = data?.text || "Could not generate description.";
         box.innerHTML = `<div class="ai-result">${esc(text)}</div>`;
-    } catch(e) {
+    } catch (e) {
+        console.error("AI description exception:", e);
         box.innerHTML = `<div class="ai-result">Error generating description. Please try again.</div>`;
     }
 }
+
+
 
 /* ─── CSV Export ─── */
 function exportCSV() {
