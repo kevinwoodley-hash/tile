@@ -21,7 +21,11 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     applyVat:      true,
     // prep costs £/m²
     cementBoard:   18,
+    cbLabour:       6,   // extra labour to fit cement board (£/m²)
+    cbAdhKgM2:      4,   // extra adhesive to bond cement board (kg/m²)
     membrane:       8,
+    memLabour:      3,   // extra labour to apply anti-crack membrane (£/m²)
+    memAdhKgM2:     3,   // extra adhesive to bed membrane (kg/m²)
     level2:         5,
     level3:         7,
     level4:         9,
@@ -732,18 +736,31 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     // Prep costs — all rates are £/m², multiplied by surface area
     s.prepCost = 0;
     s.prepLines = [];
+    s.prepAdhKg = 0;   // extra adhesive kg from prep (cement board / membrane bonding)
     if (s.type === "floor") {
         if (s.cementBoard) {
-            const rate   = parseFloat(S.cementBoard) || 18;
-            const boards = Math.ceil(s.area / 0.96);  // 0.96m² per board
-            const c      = s.area * rate;
-            s.cementBoards = boards;
-            s.prepCost += c; s.prepLines.push(`Cement Board: ${boards} board${boards !== 1 ? "s" : ""} (${s.area.toFixed(2)}m² ÷ 0.96m²/board) = £${c.toFixed(2)}`);
+            const matRate  = parseFloat(S.cementBoard) || 18;
+            const labRate  = parseFloat(S.cbLabour)    || 6;
+            const adhRate  = parseFloat(S.cbAdhKgM2)   || 4;
+            const boards   = Math.ceil(s.area / 0.96);
+            const matCost  = s.area * matRate;
+            const labCost  = s.area * labRate;
+            const adhKg    = s.area * adhRate;
+            s.cementBoards  = boards;
+            s.prepAdhKg    += adhKg;
+            s.prepCost     += matCost + labCost;
+            s.prepLines.push(`Cement Board: ${boards} board${boards !== 1 ? "s" : ""} · material £${matCost.toFixed(2)} · fitting labour £${labCost.toFixed(2)} · +${adhKg.toFixed(1)}kg adhesive`);
         }
         if (s.membrane) {
-            const rate = parseFloat(S.membrane) || 8;
-            const c    = s.area * rate;
-            s.prepCost += c; s.prepLines.push(`Anti-Crack Membrane: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+            const matRate = parseFloat(S.membrane)    || 8;
+            const labRate = parseFloat(S.memLabour)   || 3;
+            const adhRate = parseFloat(S.memAdhKgM2)  || 3;
+            const matCost = s.area * matRate;
+            const labCost = s.area * labRate;
+            const adhKg   = s.area * adhRate;
+            s.prepAdhKg  += adhKg;
+            s.prepCost   += matCost + labCost;
+            s.prepLines.push(`Anti-Crack Membrane: material £${matCost.toFixed(2)} · fitting labour £${labCost.toFixed(2)} · +${adhKg.toFixed(1)}kg adhesive`);
         }
         if (s.levelling) {
             const depth  = s.levelDepth || 2;
@@ -763,6 +780,13 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     }
 
     s.total = (s.materialSell + s.labour + s.ufhCost + s.prepCost).toFixed(2);
+
+    // Fold prep adhesive (cement board bond + membrane bed) into the surface adhKg total
+    // so job-level bag counts are correct.
+    if (s.prepAdhKg > 0) {
+        s.adhKg += s.prepAdhKg;
+        s.adhBags = Math.ceil(s.adhKg / 20);
+    }
 }
 
 /* ─── DEDUCTION PRESETS ─── */
@@ -885,6 +909,29 @@ function clearDeducts() {
     renderDeducts();
 }
 
+/* ─── SEALANT COST (with markup) for a room or form-state object ─── */
+function calcSealantCost(roomOrForm) {
+    const seal = calcSealantRoom(roomOrForm);
+    if (!seal || seal.tubes === 0) return 0;
+    const base = seal.tubes * (parseFloat(settings.siliconePrice) || 0);
+    return base * (1 + (parseFloat(settings.markup) || 0) / 100);
+}
+
+/* Build a minimal room-like object from the current sealant form fields */
+function readSealantFromForm() {
+    if (currentSurfType !== "room") return null; // sealant only on full-room mode
+    return {
+        sealantEnabled:   (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false",
+        sealantFloorPerim: document.getElementById("rm-sealant-floorperim")?.checked !== false,
+        sealantBathPerim: parseFloat(document.getElementById("rm-sealant-bath")?.value)    || 0,
+        sealantDeduct:    parseFloat(document.getElementById("rm-sealant-deduct")?.value)  || 0,
+        sealantCorners:   parseInt(document.getElementById("rm-sealant-corners")?.value)   || 0,
+        length: parseFloat(document.getElementById("rm-r-length")?.value) || 0,
+        width:  parseFloat(document.getElementById("rm-r-width")?.value)  || 0,
+        height: parseFloat(document.getElementById("rm-r-height")?.value) || 0,
+    };
+}
+
 /* ─── LIVE CALCULATION ─── */
 function rmCalc() {
     updatePrepPriceBadges();
@@ -907,8 +954,11 @@ function rmCalc() {
 
     surfaces.forEach(s => calcSurface(s, ct, labourOpts));
 
-    const extraCost = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
-    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraCost;
+    const extraCost  = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
+    const sealForm   = readSealantFromForm();
+    const sealCost   = sealForm ? calcSealantCost(sealForm) : 0;
+    const sealTubes  = sealForm ? calcSealantRoom(sealForm).tubes : 0;
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraCost + sealCost;
     const mats  = surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
     const lab   = surfaces.reduce((a, s) => a + (s.labour || 0), 0);
     const ufh   = surfaces.reduce((a, s) => a + (s.ufhCost || 0), 0);
@@ -945,7 +995,8 @@ function rmCalc() {
     if (totalCBBoards  > 0) parts.push(`Cement Board: ${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""}`);
     if (totalLevelBags > 0) parts.push(`Levelling: ${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}`);
     if (prep > 0 && totalCBBoards === 0 && totalLevelBags === 0) parts.push(`Prep £${prep.toFixed(2)}`);
-    if (extraCost > 0) parts.push(`Extra work £${extraCost.toFixed(2)}`);
+    if (sealTubes  > 0) parts.push(`Sealant: ${sealTubes} tube${sealTubes !== 1 ? "s" : ""} £${sealCost.toFixed(2)}`);
+    if (extraCost  > 0) parts.push(`Extra work £${extraCost.toFixed(2)}`);
     document.getElementById("rm-breakdown").innerHTML =
         parts.map(p => `<span class="breakdown-item">${p}</span>`).join(" · ");
 }
@@ -975,20 +1026,28 @@ function saveRoom() {
     const extraWorkCost = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
 
     const area       = parseFloat(totalArea.toFixed(2));
-    const total      = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraWorkCost;
-    const floorCount = surfaces.filter(s => s.type === "floor").length;
-    const wallCount  = surfaces.filter(s => s.type === "wall").length;
-    const type = floorCount && wallCount ? "floor + walls" : wallCount ? "wall" : "floor";
-
-    const roomLen = parseFloat(document.getElementById("rm-r-length")?.value) || 0;
-    const roomWid = parseFloat(document.getElementById("rm-r-width")?.value)  || 0;
-    const roomHei = parseFloat(document.getElementById("rm-r-height")?.value) || 0;
-
     const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
     const sealantFloorPerim = document.getElementById("rm-sealant-floorperim")?.checked !== false;
     const sealantBathPerim = parseFloat(document.getElementById("rm-sealant-bath")?.value) || 0;
     const sealantDeduct    = parseFloat(document.getElementById("rm-sealant-deduct")?.value) || 0;
     const sealantCorners   = parseInt(document.getElementById("rm-sealant-corners")?.value) || 0;
+
+    const roomLen = parseFloat(document.getElementById("rm-r-length")?.value) || 0;
+    const roomWid = parseFloat(document.getElementById("rm-r-width")?.value)  || 0;
+    const roomHei = parseFloat(document.getElementById("rm-r-height")?.value) || 0;
+
+    // Compute sealant cost now so it flows into room.total
+    const sealFormObj = currentSurfType === "room" ? {
+        sealantEnabled, sealantFloorPerim, sealantBathPerim, sealantDeduct, sealantCorners,
+        length: roomLen, width: roomWid, height: roomHei
+    } : null;
+    const roomSealCost = sealFormObj ? calcSealantCost(sealFormObj) : 0;
+
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraWorkCost + roomSealCost;
+
+    const floorCount = surfaces.filter(s => s.type === "floor").length;
+    const wallCount  = surfaces.filter(s => s.type === "wall").length;
+    const type = floorCount && wallCount ? "floor + walls" : wallCount ? "wall" : "floor";
 
     const room = {
         name,
@@ -1043,7 +1102,11 @@ function goSettings() {
     document.getElementById("set-labour-m2").value      = s.labourM2;
     document.getElementById("set-day-rate").value       = s.dayRate;
     document.getElementById("set-cementboard").value    = s.cementBoard  || 18;
+    document.getElementById("set-cb-labour").value      = s.cbLabour     || 6;
+    document.getElementById("set-cb-adh").value         = s.cbAdhKgM2    || 4;
     document.getElementById("set-membrane").value       = s.membrane     || 8;
+    document.getElementById("set-mem-labour").value     = s.memLabour    || 3;
+    document.getElementById("set-mem-adh").value        = s.memAdhKgM2   || 3;
     document.getElementById("set-level2").value         = s.level2       || 5;
     document.getElementById("set-level3").value         = s.level3       || 7;
     document.getElementById("set-level4").value         = s.level4       || 9;
@@ -1070,7 +1133,11 @@ function saveSettings() {
         labourM2Floor: 28,
         dayRate:       parseFloat(document.getElementById("set-day-rate").value)       || 200,
         cementBoard:   parseFloat(document.getElementById("set-cementboard").value)    || 18,
+        cbLabour:      parseFloat(document.getElementById("set-cb-labour").value)      || 6,
+        cbAdhKgM2:     parseFloat(document.getElementById("set-cb-adh").value)         || 4,
         membrane:      parseFloat(document.getElementById("set-membrane").value)       || 8,
+        memLabour:     parseFloat(document.getElementById("set-mem-labour").value)     || 3,
+        memAdhKgM2:    parseFloat(document.getElementById("set-mem-adh").value)        || 3,
         level2:        parseFloat(document.getElementById("set-level2").value)         || 5,
         level3:        parseFloat(document.getElementById("set-level3").value)         || 7,
         level4:        parseFloat(document.getElementById("set-level4").value)         || 9,
@@ -1406,15 +1473,14 @@ const roomTotal = parseFloat(room.total || 0);
     
     const jobSilBase = totalSiliconeTubes * (parseFloat(settings.siliconePrice) || 0);
     const jobSilSell = jobSilBase * (1 + (parseFloat(settings.markup) || 0) / 100);
-    if (totalSiliconeTubes > 0) jobScheduleLines.push(`<div class="qms-row"><span>Sealant (whole job)</span><span>${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""} <span style="color:#6b7280">· Floor perimeter bead ${totalSiliconeFloor.toFixed(1)}m</span> <span style="color:#6b7280">· £${jobSilSell.toFixed(2)}</span></span></div>`);
-    const jobScheduleHtml = jobScheduleLines.length ? `
+    if (totalSiliconeTubes > 0) jobScheduleLines.push(`<div class="qms-row"><span>Sealant (whole job)</span><span>${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""} <span style="color:#6b7280">· Floor perimeter bead ${totalSiliconeFloor.toFixed(1)}m</span> <span style="color:#6b7280">· £${jobSilSell.toFixed(2)}</span></span></div>`); = jobScheduleLines.length ? `
       <div style="margin-top:10px;">
         <div class="qms-title" style="margin-bottom:6px;">Whole job</div>
         ${jobScheduleLines.join("")}
       </div>
     ` : "";
 
-const subtotal = totalMats + totalLabour + totalPrep + totalExtras;
+const subtotal = totalMats + totalLabour + totalPrep + totalExtras + jobSilSell;
     const vatAmt   = applyVat ? subtotal * 0.2 : 0;
     const grand    = subtotal + vatAmt;
 
@@ -1451,6 +1517,7 @@ const subtotal = totalMats + totalLabour + totalPrep + totalExtras;
                 <tr><td>Materials</td><td style="text-align:right">£${totalMats.toFixed(2)}</td></tr>
                 <tr><td>Labour</td><td style="text-align:right">£${totalLabour.toFixed(2)}</td></tr>
                 ${totalPrep > 0 ? `<tr><td>Preparation</td><td style="text-align:right">£${totalPrep.toFixed(2)}</td></tr>` : ""}
+                ${jobSilSell > 0 ? `<tr><td>Sealant (${totalSiliconeTubes} tube${totalSiliconeTubes !== 1 ? "s" : ""})</td><td style="text-align:right">£${jobSilSell.toFixed(2)}</td></tr>` : ""}
             </tbody>
         </table>
 
@@ -1651,6 +1718,16 @@ function downloadPDF() {
             doc.text(`  ${room.extraWorkDesc || "Extra work"}`, 17, y);
             doc.text(`£${extraCost.toFixed(2)}`, W - 14, y, { align:"right" });
             subtotal += extraCost;
+            y += 5;
+        }
+        const pdfSealCost = calcSealantCost(room);
+        if (pdfSealCost > 0) {
+            const pdfSealTubes = calcSealantRoom(room).tubes;
+            doc.setFont("helvetica","normal");
+            doc.setTextColor(...mid);
+            doc.text(`  Sealant (${pdfSealTubes} tube${pdfSealTubes !== 1 ? "s" : ""})`, 17, y);
+            doc.text(`£${pdfSealCost.toFixed(2)}`, W - 14, y, { align:"right" });
+            subtotal += pdfSealCost;
             y += 5;
         }
         y += 2;
