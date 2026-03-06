@@ -727,3 +727,19 @@ textarea { resize: vertical; }
 .extra-surface-card .field-row { margin-bottom: 8px; }
 .extra-surface-card .field-group label { font-size: 11px; }
 .extra-surface-card .prep-options { margin-top: 8px; }
+
+/* ── Collapsible deductions ── */
+.deduct-toggle {
+    cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 4px;
+}
+.deduct-toggle:hover { color: var(--amber); }
+.deduct-toggle-arrow { font-size: 11px; color: var(--muted); }
+
+/* Deduction chip grid */
+.deduct-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 8px;
+}

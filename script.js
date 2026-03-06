@@ -136,7 +136,7 @@ function updatePrepPriceBadges() {
     const S = settings;
     document.querySelectorAll(".pc-cb").forEach(el   => el.textContent = S.cementBoard);
     document.querySelectorAll(".pc-mem").forEach(el  => el.textContent = S.membrane);
-    document.querySelectorAll(".pc-tank-r, .pc-tank-w").forEach(el => el.textContent = S.tanking);
+    document.querySelectorAll(".pc-tank-r, .pc-tank-w, .pc-tank-f").forEach(el => el.textContent = S.tanking);
     document.querySelectorAll(".pc-clips").forEach(el => el.textContent = S.clipPrice || 12);
     updateLevelBadge("rm-r-leveldepth", ".pc-lev-r");
     updateLevelBadge("rm-f-leveldepth", ".pc-lev-f");
@@ -494,7 +494,7 @@ function clearRoomInputs() {
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
     ["rm-r-cementboard","rm-r-membrane","rm-r-levelling","rm-r-tanking","rm-r-clips",
-     "rm-f-cementboard","rm-f-membrane","rm-f-levelling","rm-f-clips",
+     "rm-f-cementboard","rm-f-membrane","rm-f-levelling","rm-f-clips","rm-f-tanking",
      "rm-w-tanking"].forEach(id => {
         const el = document.getElementById(id); if (el) el.checked = false;
     });
@@ -589,6 +589,7 @@ function restoreRoomInputs(room) {
         setCb("rm-f-membrane",    floors[0].membrane);
         setCb("rm-f-levelling",   floors[0].levelling);
         setCb("rm-f-clips",       floors[0].clips);
+        setCb("rm-f-tanking",     floors[0].tanking);
         if (floors[0].levelling) {
             set("rm-f-leveldepth", floors[0].levelDepth || 2);
             document.getElementById("rm-f-level-depth").classList.remove("hidden");
@@ -926,6 +927,7 @@ function buildSurfaces() {
             levelling:   cb("rm-f-levelling"),
             levelDepth:  parseInt(sv("rm-f-leveldepth")) || 2,
             clips:       cb("rm-f-clips"),
+            tanking:     cb("rm-f-tanking"),
             area: Math.max(0, L * W - fDed)
         }, ...buildExtraSurfaces()];
     }
