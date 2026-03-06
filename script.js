@@ -309,8 +309,8 @@ function renderJobView() {
         const groutBags  = Math.ceil(groutKg / (parseFloat(settings.groutBagSize) || 2.5));
         const cbBoards   = surfaces.reduce((a, s) => a + (s.cementBoards  || 0), 0);
         const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
-        const clips      = surfaces.reduce((a, s) => a + (s.levelClips    || 0), 0);
-        const wedges     = surfaces.reduce((a, s) => a + (s.levelWedges   || 0), 0);
+        const clips      = surfaces.reduce((a, s) => a + (s.clips ? (s.levelClips  || 0) : 0), 0);
+        const wedges     = surfaces.reduce((a, s) => a + (s.clips ? (s.levelWedges || 0) : 0), 0);
         const clipCost   = surfaces.reduce((a, s) => a + (s.clipCost      || 0), 0);
 
         const matSchedule = [
@@ -1328,8 +1328,8 @@ function rmCalc() {
     const totalGroutBags  = Math.ceil(totalGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
     const totalCBBoards   = surfaces.reduce((a, s) => a + (s.cementBoards|| 0), 0);
     const totalLevelBags  = surfaces.reduce((a, s) => a + (s.levelBags   || 0), 0);
-    const totalClips      = surfaces.reduce((a, s) => a + (s.levelClips  || 0), 0);
-    const totalWedges     = surfaces.reduce((a, s) => a + (s.levelWedges || 0), 0);
+    const totalClips      = surfaces.reduce((a, s) => a + (s.clips ? (s.levelClips  || 0) : 0), 0);
+    const totalWedges     = surfaces.reduce((a, s) => a + (s.clips ? (s.levelWedges || 0) : 0), 0);
     const totalClipCost   = surfaces.reduce((a, s) => a + (s.clipCost    || 0), 0);
 
     const parts = [];
@@ -1580,8 +1580,8 @@ function renderMaterials() {
             }
             if (s.cementBoards) grandCBBoards  += s.cementBoards;
             if (s.levelBags)    grandLevelBags += s.levelBags;
-            grandClips  += s.levelClips  || 0;
-            grandWedges += s.levelWedges || 0;
+            grandClips  += s.clips ? (s.levelClips  || 0) : 0;
+            grandWedges += s.clips ? (s.levelWedges || 0) : 0;
             if (s.ufh)          hasUFH = true;
 
             const prepItems = [];
@@ -1705,8 +1705,8 @@ function renderQuote() {
         totalFloorGroutKg  += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutKg||0),0);
         totalCBBoards  += surfaces.reduce((a, s) => a + (s.cementBoards || 0), 0);
         totalLevelBags += surfaces.reduce((a, s) => a + (s.levelBags || 0), 0);
-        totalClips     += surfaces.reduce((a, s) => a + (s.levelClips  || 0), 0);
-        totalWedges    += surfaces.reduce((a, s) => a + (s.levelWedges || 0), 0);
+        totalClips     += surfaces.reduce((a, s) => a + (s.clips ? (s.levelClips  || 0) : 0), 0);
+        totalWedges    += surfaces.reduce((a, s) => a + (s.clips ? (s.levelWedges || 0) : 0), 0);
 
         // Sealant (per room, perimeter-based; no wall double-counting)
         const seal = calcSealantRoom(room);
