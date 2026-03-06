@@ -1279,6 +1279,8 @@ function updateWallTilesBadge() {
 function toggleDeductPanel(key) {
     const panel  = document.getElementById("deduct-panel-" + key);
     const toggle = document.getElementById("deduct-toggle-" + key);
+    if (!panel) return;
+    const open = panel.classList.toggle("hidden") === false;
     const arrow = toggle?.querySelector(".deduct-toggle-arrow");
     if (arrow) arrow.textContent = open ? "▾" : "▸";
 }
