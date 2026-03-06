@@ -1805,6 +1805,20 @@ function downloadPDF() {
     if (addr) { y += 5; doc.text(addr, 14, y); }
     if (j.email) { y += 5; doc.text(j.email, 14, y); }
 
+    // AI / job description
+    if (j.description) {
+        y += 7;
+        doc.setDrawColor(...amber);
+        doc.setLineWidth(0.8);
+        doc.line(14, y, 14, y + 10);
+        doc.setTextColor(...mid);
+        doc.setFont("helvetica","italic");
+        doc.setFontSize(9);
+        const descLines = doc.splitTextToSize(j.description, W - 36);
+        doc.text(descLines, 18, y + 4);
+        y += Math.max(10, descLines.length * 5);
+    }
+
     // Table
     y += 10;
     doc.setFillColor(...amber);
