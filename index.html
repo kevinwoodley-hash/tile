@@ -340,6 +340,24 @@
             </div>
             </div>
 
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim')" id="collapse-toggle-trim">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim">▸</span>
+                <span id="trim-r-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('r')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£) <span class="pc-trim" style="color:var(--muted);font-weight:400;"></span></label>
+                    <input id="rm-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('r')">
+                </div>
+            </div>
+            <div class="small-note">Trim at <span class="pc-trim-len">2.5</span>m per length. Override price here or set default in Settings.</div>
+            </div>
+
             <div class="divider-label deduct-toggle" onclick="toggleDeductPanel('r')" id="deduct-toggle-r">
                 Deductions <span class="deduct-toggle-arrow">▸</span>
                 <span id="deduct-total-badge" style="background:#c00;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:6px;display:none;"></span>
@@ -487,11 +505,23 @@
                 </div>
             </div>
             </div>
-            <div class="divider-label">Tile</div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim-f')" id="collapse-toggle-trim-f">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim-f">▸</span>
+                <span id="trim-f-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim-f" class="hidden">
             <div class="field-row">
                 <div class="field-group">
-                    <label>Tile W (mm)</label>
-                    <input id="rm-f-tilew" type="number" value="600" oninput="rmCalc()">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-f-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('f')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£)</label>
+                    <input id="rm-f-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('f')">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label">Tile</div>
                 </div>
                 <div class="field-group">
                     <label>Tile H (mm)</label>
@@ -587,6 +617,22 @@
                 <div class="field-group" style="flex:1;">
                     <label>Cost (£)</label>
                     <input id="rm-w-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim-w')" id="collapse-toggle-trim-w">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim-w">▸</span>
+                <span id="trim-w-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim-w" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-w-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('w')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£)</label>
+                    <input id="rm-w-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('w')">
                 </div>
             </div>
             </div>
@@ -701,6 +747,7 @@
             <div class="field-row">
                 <div class="field-group"><label>Clips (£ per 200)</label><input id="set-clip-price" type="number" step="0.50"></div>
                 <div class="field-group"><label>Wedges (£ per 200)</label><input id="set-wedge-price" type="number" step="0.50"></div>
+                <div class="field-group"><label>Tile Trim (£ per 2.5m length)</label><input id="set-trim-price" type="number" step="0.50"></div>
             </div>
             <div class="form-section-label" style="margin-top:18px;">VAT</div>
             <div class="field-group"><label>Apply VAT by default?</label>

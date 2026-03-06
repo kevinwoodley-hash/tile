@@ -36,6 +36,7 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     tanking:        15,
     clipPrice:      12,   // £ per bag of 200 clips
     wedgePrice:      8,   // £ per bag of 200 wedges
+    trimPrice:       3.50, // £ per 2.5m length of trim
     companyName:   "",
     companyPhone:  "",
     companyEmail:  "",
@@ -143,6 +144,7 @@ function updatePrepPriceBadges() {
     document.querySelectorAll(".pc-mem").forEach(el  => el.textContent = S.membrane);
     document.querySelectorAll(".pc-tank-r, .pc-tank-w, .pc-tank-f").forEach(el => el.textContent = S.tanking);
     document.querySelectorAll(".pc-clips").forEach(el => el.textContent = S.clipPrice || 12);
+    document.querySelectorAll(".pc-trim").forEach(el => el.textContent = `£${(S.trimPrice || 3.50).toFixed(2)}`);
     updateLevelBadge("rm-r-leveldepth", ".pc-lev-r");
     updateLevelBadge("rm-f-leveldepth", ".pc-lev-f");
 }
@@ -505,6 +507,9 @@ function clearRoomInputs() {
     const fexc = document.getElementById("rm-f-extra-cost"); if (fexc) fexc.value = "";
     const wexd = document.getElementById("rm-w-extra-desc"); if (wexd) wexd.value = "";
     const wexc = document.getElementById("rm-w-extra-cost"); if (wexc) wexc.value = "";
+    ["rm-trim-lengths","rm-trim-price","rm-f-trim-lengths","rm-f-trim-price","rm-w-trim-lengths","rm-w-trim-price"]
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["trim-r-badge","trim-f-badge","trim-w-badge"].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ""; });
     document.getElementById("rm-f-ufh").checked       = false;
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
@@ -539,7 +544,7 @@ function clearRoomInputs() {
     extraSurfaces = [];
     renderExtraSurfaces();
     // Close all collapsible panels
-    ["sealant","extrawork","walltiles","extrawork-f","extrawork-w"].forEach(closeCollapse);
+    ["sealant","extrawork","walltiles","extrawork-f","extrawork-w","trim","trim-f","trim-w"].forEach(closeCollapse);
 }
 
 /* Restore fields when editing an existing room */
@@ -637,7 +642,11 @@ function restoreRoomInputs(room) {
         extraSurfaces = walls.slice(1).map(s => ({ ...s, type:"wall" }));
     }
     renderExtraSurfaces();
-    // Auto-open deductions panel if room has deductions
+    // Restore trim
+    if (room.trimLengths) {
+        const lenId   = room.savedType === "floor" ? "rm-f-trim-lengths" : room.savedType === "wall" ? "rm-w-trim-lengths" : "rm-trim-lengths";
+        set(lenId, room.trimLengths);
+    }
     setTimeout(() => {
         const hasWallDeduct = parseFloat(document.getElementById("rm-r-deduct")?.value) > 0;
         const hasFloorDeduct = parseFloat(document.getElementById("rm-r-fdeduct")?.value) > 0 ||
@@ -655,6 +664,12 @@ function restoreRoomInputs(room) {
             if (currentSurfType === "floor") openCollapse("extrawork-f");
             else if (currentSurfType === "wall") openCollapse("extrawork-w");
             else openCollapse("extrawork");
+        }
+        const hasTrim = room.trimLengths > 0;
+        if (hasTrim) {
+            const trimPanelKey = currentSurfType === "floor" ? "trim-f" : currentSurfType === "wall" ? "trim-w" : "trim";
+            openCollapse(trimPanelKey);
+            updateTrimBadge(currentSurfType === "floor" ? "f" : currentSurfType === "wall" ? "w" : "r");
         }
         if (currentSurfType === "room") { openCollapse("walltiles"); updateWallTilesBadge(); }
     }, 50);
@@ -1284,6 +1299,23 @@ function closeCollapse(key) {
     if (arrow) arrow.textContent = "▸";
 }
 
+function updateTrimBadge(key) {
+    const badge = document.getElementById("trim-" + key + "-badge");
+    if (!badge) return;
+    const lenId   = key === "r" ? "rm-trim-lengths" : key === "f" ? "rm-f-trim-lengths" : "rm-w-trim-lengths";
+    const lengths = parseInt(document.getElementById(lenId)?.value) || 0;
+    badge.textContent = lengths > 0 ? `${lengths} × 2.5m` : "";
+}
+
+function readTrimCost(key) {
+    const lenId   = key === "r" ? "rm-trim-lengths"   : key === "f" ? "rm-f-trim-lengths"   : "rm-w-trim-lengths";
+    const priceId = key === "r" ? "rm-trim-price"     : key === "f" ? "rm-f-trim-price"     : "rm-w-trim-price";
+    const lengths = parseInt(document.getElementById(lenId)?.value)   || 0;
+    const price   = parseFloat(document.getElementById(priceId)?.value) || parseFloat(settings.trimPrice) || 3.50;
+    return { lengths, price, cost: lengths * price };
+}
+
+
 function updateWallTilesBadge() {
     const badge = document.getElementById("walltiles-badge");
     if (!badge) return;
@@ -1375,10 +1407,12 @@ function rmCalc() {
                       : currentSurfType === "wall"  ? "rm-w-extra-cost"
                       :                               "rm-extra-cost";
     const extraCost  = parseFloat(document.getElementById(extraCostId)?.value) || 0;
+    const trimKey    = currentSurfType === "floor" ? "f" : currentSurfType === "wall" ? "w" : "r";
+    const trimCost   = readTrimCost(trimKey).cost;
     const sealForm   = readSealantFromForm();
     const sealCost   = sealForm ? calcSealantCost(sealForm) : 0;
     const sealTubes  = sealForm ? calcSealantRoom(sealForm).tubes : 0;
-    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraCost + sealCost;
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraCost + trimCost + sealCost;
     const mats  = surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
     const lab   = surfaces.reduce((a, s) => a + (s.labour || 0), 0);
     const ufh   = surfaces.reduce((a, s) => a + (s.ufhCost || 0), 0);
@@ -1454,6 +1488,10 @@ function saveRoom() {
                        :                               "rm-extra-cost";
     const extraWorkDesc = (document.getElementById(extraDescId)?.value || "").trim();
     const extraWorkCost = parseFloat(document.getElementById(extraCostId2)?.value) || 0;
+    const trimKey2  = currentSurfType === "floor" ? "f" : currentSurfType === "wall" ? "w" : "r";
+    const trimData  = readTrimCost(trimKey2);
+    const trimLengths = trimData.lengths;
+    const trimCostSave = trimData.cost;
 
     const area       = parseFloat(totalArea.toFixed(2));
     const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
@@ -1471,7 +1509,7 @@ function saveRoom() {
     } : null;
     const roomSealCost = sealFormObj ? calcSealantCost(sealFormObj) : 0;
 
-    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraWorkCost + roomSealCost;
+    const total = surfaces.reduce((a, s) => a + parseFloat(s.total), 0) + extraWorkCost + trimCostSave + roomSealCost;
 
     const floorCount = surfaces.filter(s => s.type === "floor").length;
     const wallCount  = surfaces.filter(s => s.type === "wall").length;
@@ -1487,6 +1525,8 @@ function saveRoom() {
         sealantCorners,
         extraWorkDesc: extraWorkDesc || undefined,
         extraWorkCost: extraWorkCost || 0,
+        trimLengths:   trimLengths  || undefined,
+        trimCost:      trimCostSave || 0,
         wallDeducts: wallDeducts.slice(),
         floorDeducts: floorDeducts.slice(),
         savedType:   currentSurfType,
@@ -1543,6 +1583,7 @@ function goSettings() {
     document.getElementById("set-tanking").value        = s.tanking      || 15;
     document.getElementById("set-clip-price").value     = s.clipPrice    || 12;
     document.getElementById("set-wedge-price").value    = s.wedgePrice   || 8;
+    document.getElementById("set-trim-price").value     = s.trimPrice    || 3.50;
     document.getElementById("set-vat").value            = s.applyVat !== false ? "true" : "false";
     document.getElementById("set-company-name").value   = s.companyName  || "";
     document.getElementById("set-company-phone").value  = s.companyPhone || "";
@@ -1580,6 +1621,7 @@ function saveSettings() {
         tanking:       parseFloat(document.getElementById("set-tanking").value)        || 15,
         clipPrice:     parseFloat(document.getElementById("set-clip-price").value)     || 12,
         wedgePrice:    parseFloat(document.getElementById("set-wedge-price").value)    || 8,
+        trimPrice:     parseFloat(document.getElementById("set-trim-price").value)     || 3.50,
         applyVat:      document.getElementById("set-vat").value === "true",
         companyName:   document.getElementById("set-company-name").value.trim(),
         companyPhone:  document.getElementById("set-company-phone").value.trim(),
