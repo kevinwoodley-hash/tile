@@ -776,7 +776,6 @@ function renderExtraSurfaces() {
 }
 
 function buildExtraSurfaces() {
-    const S = loadSettings();
     return extraSurfaces
         .map(s => {
             if (s.type === "floor") {
