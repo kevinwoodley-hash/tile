@@ -30,6 +30,8 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     level3:         7,
     level4:         9,
     tanking:        15,
+    clipPrice:      12,   // £ per bag of 200 clips
+    wedgePrice:      8,   // £ per bag of 200 wedges
     companyName:   "",
     companyPhone:  "",
     companyEmail:  "",
@@ -111,6 +113,7 @@ function updatePrepPriceBadges() {
     document.querySelectorAll(".pc-cb").forEach(el   => el.textContent = S.cementBoard);
     document.querySelectorAll(".pc-mem").forEach(el  => el.textContent = S.membrane);
     document.querySelectorAll(".pc-tank-r, .pc-tank-w").forEach(el => el.textContent = S.tanking);
+    document.querySelectorAll(".pc-clips").forEach(el => el.textContent = S.clipPrice || 12);
     updateLevelBadge("rm-r-leveldepth", ".pc-lev-r");
     updateLevelBadge("rm-f-leveldepth", ".pc-lev-f");
 }
@@ -284,13 +287,14 @@ function renderJobView() {
         const levelBags  = surfaces.reduce((a, s) => a + (s.levelBags     || 0), 0);
         const clips      = surfaces.reduce((a, s) => a + (s.levelClips    || 0), 0);
         const wedges     = surfaces.reduce((a, s) => a + (s.levelWedges   || 0), 0);
+        const clipCost   = surfaces.reduce((a, s) => a + (s.clipCost      || 0), 0);
 
         const matSchedule = [
             adhBags  > 0 ? `Adhesive: ${adhBags} × 20kg`                                       : "",
             groutBags> 0 ? `Grout: ${groutBags} × 2.5kg bag${groutBags !== 1 ? "s" : ""}`      : "",
             cbBoards > 0 ? `Cement Board: ${cbBoards} board${cbBoards !== 1 ? "s" : ""}`       : "",
             levelBags> 0 ? `Levelling: ${levelBags} × 20kg`                                    : "",
-            clips    > 0 ? `Clips: ${clips}  ·  Wedges: ${wedges}`                             : "",
+            clips    > 0 ? `Clips: ${clips}  ·  Wedges: ${wedges}${clipCost > 0 ? `  ·  £${clipCost.toFixed(2)}` : ""}` : "",
         ].filter(Boolean).join("  ·  ");
 
         const seal = calcSealantRoom(r);
@@ -465,8 +469,8 @@ function clearRoomInputs() {
     document.getElementById("rm-f-ufh").checked       = false;
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
-    ["rm-r-cementboard","rm-r-membrane","rm-r-levelling","rm-r-tanking",
-     "rm-f-cementboard","rm-f-membrane","rm-f-levelling",
+    ["rm-r-cementboard","rm-r-membrane","rm-r-levelling","rm-r-tanking","rm-r-clips",
+     "rm-f-cementboard","rm-f-membrane","rm-f-levelling","rm-f-clips",
      "rm-w-tanking"].forEach(id => {
         const el = document.getElementById(id); if (el) el.checked = false;
     });
@@ -536,6 +540,7 @@ function restoreRoomInputs(room) {
             setCb("rm-r-cementboard", floors[0].cementBoard);
             setCb("rm-r-membrane",    floors[0].membrane);
             setCb("rm-r-levelling",   floors[0].levelling);
+            setCb("rm-r-clips",       floors[0].clips);
             if (floors[0].levelling) {
                 set("rm-r-leveldepth", floors[0].levelDepth || 2);
                 document.getElementById("rm-r-level-depth").classList.remove("hidden");
@@ -556,6 +561,7 @@ function restoreRoomInputs(room) {
         setCb("rm-f-cementboard", floors[0].cementBoard);
         setCb("rm-f-membrane",    floors[0].membrane);
         setCb("rm-f-levelling",   floors[0].levelling);
+        setCb("rm-f-clips",       floors[0].clips);
         if (floors[0].levelling) {
             set("rm-f-leveldepth", floors[0].levelDepth || 2);
             document.getElementById("rm-f-level-depth").classList.remove("hidden");
@@ -614,6 +620,7 @@ function buildSurfaces() {
                 membrane:    cb("rm-r-membrane"),
                 levelling:   cb("rm-r-levelling"),
                 levelDepth:  parseInt(sv("rm-r-leveldepth")) || 2,
+                clips:       cb("rm-r-clips"),
                 area: Math.max(0, L * W - floorDeduct)
             });
         }
@@ -634,6 +641,7 @@ function buildSurfaces() {
             membrane:    cb("rm-f-membrane"),
             levelling:   cb("rm-f-levelling"),
             levelDepth:  parseInt(sv("rm-f-leveldepth")) || 2,
+            clips:       cb("rm-f-clips"),
             area: Math.max(0, L * W - fDed)
         }];
     }
@@ -710,6 +718,18 @@ function calcSurface(s, customerTiles, labourOpts) {
     const clipsPerTile = maxDim >= 1200 ? 6 : maxDim > 600 ? 5 : 4;
     s.levelClips  = s.tiles * clipsPerTile;
     s.levelWedges = Math.ceil(s.levelClips * 0.25);
+
+    // Clip/wedge cost — only when opted in via s.clips flag
+    s.clipCost = 0;
+    if (s.clips) {
+        const clipBags  = Math.ceil(s.levelClips  / 200);
+        const wedgeBags = Math.ceil(s.levelWedges / 200);
+        const clipRate  = parseFloat(S.clipPrice)  || 12;
+        const wedgeRate = parseFloat(S.wedgePrice) || 8;
+        s.clipCost = (clipBags * clipRate + wedgeBags * wedgeRate) * (1 + S.markup / 100);
+        s.prepCost += s.clipCost;
+        s.prepLines.push(`Levelling Clips: ${s.levelClips} (${clipBags} × 200 bag${clipBags!==1?"s":""}) + Wedges: ${s.levelWedges} (${wedgeBags} × 200 bag${wedgeBags!==1?"s":""}) = £${s.clipCost.toFixed(2)}`);
+    }
 const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     // Price adhesive/grout pro-rata by kg so multiple small surfaces don’t over-round
     const groutCost = (totalGroutKg / 2.5) * S.groutPrice;
@@ -982,6 +1002,7 @@ function rmCalc() {
     const totalLevelBags  = surfaces.reduce((a, s) => a + (s.levelBags   || 0), 0);
     const totalClips      = surfaces.reduce((a, s) => a + (s.levelClips  || 0), 0);
     const totalWedges     = surfaces.reduce((a, s) => a + (s.levelWedges || 0), 0);
+    const totalClipCost   = surfaces.reduce((a, s) => a + (s.clipCost    || 0), 0);
 
     const parts = [];
     if (mats > 0) parts.push(`Materials £${mats.toFixed(2)}`);
@@ -996,7 +1017,7 @@ function rmCalc() {
     if (totalGroutBags > 0) parts.push(`Grout: ${totalGroutBags} × 2.5kg bag${totalGroutBags !== 1 ? "s" : ""}`);
     if (totalCBBoards  > 0) parts.push(`Cement Board: ${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""}`);
     if (totalLevelBags > 0) parts.push(`Levelling: ${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}`);
-    if (totalClips     > 0) parts.push(`Clips: ${totalClips} / Wedges: ${totalWedges}`);
+    if (totalClips > 0) parts.push(`Clips: ${totalClips} / Wedges: ${totalWedges}${totalClipCost > 0 ? ` £${totalClipCost.toFixed(2)}` : ""}`);
     if (prep > 0 && totalCBBoards === 0 && totalLevelBags === 0) parts.push(`Prep £${prep.toFixed(2)}`);
     if (sealTubes  > 0) parts.push(`Sealant: ${sealTubes} tube${sealTubes !== 1 ? "s" : ""} £${sealCost.toFixed(2)}`);
     if (extraCost  > 0) parts.push(`Extra work £${extraCost.toFixed(2)}`);
@@ -1110,6 +1131,8 @@ function goSettings() {
     document.getElementById("set-level3").value         = s.level3       || 7;
     document.getElementById("set-level4").value         = s.level4       || 9;
     document.getElementById("set-tanking").value        = s.tanking      || 15;
+    document.getElementById("set-clip-price").value     = s.clipPrice    || 12;
+    document.getElementById("set-wedge-price").value    = s.wedgePrice   || 8;
     document.getElementById("set-vat").value            = s.applyVat !== false ? "true" : "false";
     document.getElementById("set-company-name").value   = s.companyName  || "";
     document.getElementById("set-company-phone").value  = s.companyPhone || "";
@@ -1141,6 +1164,8 @@ function saveSettings() {
         level3:        parseFloat(document.getElementById("set-level3").value)         || 7,
         level4:        parseFloat(document.getElementById("set-level4").value)         || 9,
         tanking:       parseFloat(document.getElementById("set-tanking").value)        || 15,
+        clipPrice:     parseFloat(document.getElementById("set-clip-price").value)     || 12,
+        wedgePrice:    parseFloat(document.getElementById("set-wedge-price").value)    || 8,
         applyVat:      document.getElementById("set-vat").value === "true",
         companyName:   document.getElementById("set-company-name").value.trim(),
         companyPhone:  document.getElementById("set-company-phone").value.trim(),
