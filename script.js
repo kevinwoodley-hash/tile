@@ -1270,6 +1270,10 @@ function rmCalc() {
     if (!surfaces) {
         document.getElementById("rm-total").textContent = "0.00";
         document.getElementById("rm-breakdown").innerHTML = "";
+        ["rm-r-clips-row","rm-f-clips-row"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.classList.add("hidden"); const cb = el.querySelector("input[type=checkbox]"); if (cb) cb.checked = false; }
+        });
         return;
     }
 
