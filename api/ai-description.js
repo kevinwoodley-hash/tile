@@ -1,30 +1,43 @@
-export default async function handler(req,res){
-  if(req.method !== 'POST') return res.status(405).json({error:'Method not allowed'});
+export default async function handler(req, res) {
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Method not allowed" });
+    }
 
-  if(!process.env.ANTHROPIC_API_KEY){
-    return res.status(500).json({error:'Missing ANTHROPIC_API_KEY'});
-  }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured on server." });
+    }
 
-  try{
     const { prompt } = req.body || {};
-    const r = await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version":"2023-06-01",
-        "content-type":"application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-3-sonnet-20240229",
-        max_tokens: 350,
-        messages: [{ role:"user", content: String(prompt || "Write a short tiling job description.") }]
-      })
-    });
+    if (!prompt) {
+        return res.status(400).json({ error: "Missing prompt" });
+    }
 
-    const data = await r.json();
-    if(!r.ok) return res.status(r.status).json(data);
-    return res.status(200).json(data);
-  }catch(e){
-    return res.status(500).json({error: e?.message || "Server error"});
-  }
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01"
+            },
+            body: JSON.stringify({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 400,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            return res.status(response.status).json({ error: err?.error?.message || "Anthropic API error" });
+        }
+
+        const data = await response.json();
+        const text = data?.content?.[0]?.text || "";
+        return res.status(200).json({ text });
+
+    } catch (e) {
+        return res.status(500).json({ error: e.message || "Server error" });
+    }
 }
