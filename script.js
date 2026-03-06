@@ -431,7 +431,8 @@ function goAddRoom() {
     currentLabourType = "m2";
     document.getElementById("room-screen-title").textContent = "Add Room";
     document.getElementById("rm-name").value = "";
-    document.getElementById("rm-customer-tiles").checked = false;
+    const job = getJob();
+    document.getElementById("rm-customer-tiles").checked = (job?.tileSupply === "customer");
     document.getElementById("rm-dayrate").value = settings.dayRate || 200;
     document.getElementById("rm-days").value = "";
     clearRoomInputs();
@@ -500,6 +501,10 @@ function clearRoomInputs() {
     const sc = document.getElementById("rm-sealant-corners"); if (sc) sc.value = "";
     const exd = document.getElementById("rm-extra-desc"); if (exd) exd.value = "";
     const exc = document.getElementById("rm-extra-cost"); if (exc) exc.value = "";
+    const fexd = document.getElementById("rm-f-extra-desc"); if (fexd) fexd.value = "";
+    const fexc = document.getElementById("rm-f-extra-cost"); if (fexc) fexc.value = "";
+    const wexd = document.getElementById("rm-w-extra-desc"); if (wexd) wexd.value = "";
+    const wexc = document.getElementById("rm-w-extra-cost"); if (wexc) wexc.value = "";
     document.getElementById("rm-f-ufh").checked       = false;
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
@@ -534,7 +539,7 @@ function clearRoomInputs() {
     extraSurfaces = [];
     renderExtraSurfaces();
     // Close all collapsible panels
-    ["sealant","extrawork","walltiles"].forEach(closeCollapse);
+    ["sealant","extrawork","walltiles","extrawork-f","extrawork-w"].forEach(closeCollapse);
 }
 
 /* Restore fields when editing an existing room */
@@ -553,6 +558,14 @@ function restoreRoomInputs(room) {
     // Extra work
     set("rm-extra-desc", room.extraWorkDesc || "");
     set("rm-extra-cost", (room.extraWorkCost || room.extraWorkCost === 0) ? room.extraWorkCost : "");
+    // floor/wall extra work — same value stored in room, applied to the right form on restore
+    if (room.savedType === "floor") {
+        set("rm-f-extra-desc", room.extraWorkDesc || "");
+        set("rm-f-extra-cost", room.extraWorkCost || "");
+    } else if (room.savedType === "wall") {
+        set("rm-w-extra-desc", room.extraWorkDesc || "");
+        set("rm-w-extra-cost", room.extraWorkCost || "");
+    }
 
     if (currentSurfType === "room") {
         if ((room.length||0) > 0 && (room.width||0) > 0 && (room.height||0) > 0) {
@@ -638,7 +651,11 @@ function restoreRoomInputs(room) {
                            (parseFloat(room.sealantCorners) > 0);
         const hasExtraWork = room.extraWorkDesc || parseFloat(room.extraWorkCost) > 0;
         if (hasSealant) openCollapse("sealant");
-        if (hasExtraWork) openCollapse("extrawork");
+        if (hasExtraWork) {
+            if (currentSurfType === "floor") openCollapse("extrawork-f");
+            else if (currentSurfType === "wall") openCollapse("extrawork-w");
+            else openCollapse("extrawork");
+        }
         if (currentSurfType === "room") { openCollapse("walltiles"); updateWallTilesBadge(); }
     }, 50);
 }
@@ -1354,7 +1371,10 @@ function rmCalc() {
 
     surfaces.forEach(s => calcSurface(s, ct, labourOpts));
 
-    const extraCost  = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
+    const extraCostId = currentSurfType === "floor" ? "rm-f-extra-cost"
+                      : currentSurfType === "wall"  ? "rm-w-extra-cost"
+                      :                               "rm-extra-cost";
+    const extraCost  = parseFloat(document.getElementById(extraCostId)?.value) || 0;
     const sealForm   = readSealantFromForm();
     const sealCost   = sealForm ? calcSealantCost(sealForm) : 0;
     const sealTubes  = sealForm ? calcSealantRoom(sealForm).tubes : 0;
@@ -1426,8 +1446,14 @@ function saveRoom() {
 
     surfaces.forEach(s => calcSurface(s, ct, labourOpts));
 
-    const extraWorkDesc = (document.getElementById("rm-extra-desc")?.value || "").trim();
-    const extraWorkCost = parseFloat(document.getElementById("rm-extra-cost")?.value) || 0;
+    const extraDescId = currentSurfType === "floor" ? "rm-f-extra-desc"
+                      : currentSurfType === "wall"  ? "rm-w-extra-desc"
+                      :                               "rm-extra-desc";
+    const extraCostId2 = currentSurfType === "floor" ? "rm-f-extra-cost"
+                       : currentSurfType === "wall"  ? "rm-w-extra-cost"
+                       :                               "rm-extra-cost";
+    const extraWorkDesc = (document.getElementById(extraDescId)?.value || "").trim();
+    const extraWorkCost = parseFloat(document.getElementById(extraCostId2)?.value) || 0;
 
     const area       = parseFloat(totalArea.toFixed(2));
     const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
