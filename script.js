@@ -2414,9 +2414,11 @@ function openMapPicker(prefix) {
     const prefill = [addr, city, post].filter(Boolean).join(", ");
     if (prefill) document.getElementById("map-search-input").value = prefill;
 
-    setTimeout(() => {
+    // Double rAF ensures the browser has painted the modal (visible, sized)
+    // before Leaflet tries to measure the container
+    requestAnimationFrame(() => requestAnimationFrame(() => {
         if (!_mapInst) {
-            _mapInst = L.map("map-container").setView([52.5, -1.5], 6);
+            _mapInst = L.map("map-container", { zoomControl: true }).setView([52.5, -1.5], 6);
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                 maxZoom: 19
@@ -2427,7 +2429,7 @@ function openMapPicker(prefix) {
         }
         if (prefill) mapSearchNow();
         document.getElementById("map-search-input").focus();
-    }, 80);
+    }));
 }
 
 function closeMapPicker() {
@@ -2471,8 +2473,11 @@ async function mapSearchNow() {
     }
 }
 
+let _mapSearchResults = [];
+
 function _renderSearchResults(results) {
     const box = document.getElementById("map-search-results");
+    _mapSearchResults = results;
     if (!results.length) {
         box.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:13px;">No results found.</div>`;
         return;
@@ -2481,13 +2486,11 @@ function _renderSearchResults(results) {
         const label = r.display_name;
         return `<div class="map-result-item" onclick="_selectResult(${i})">${label}</div>`;
     }).join("");
-    box._results = results;
 }
 
 function _selectResult(i) {
-    const results = document.getElementById("map-search-results")._results;
-    if (!results) return;
-    const r = results[i];
+    const r = _mapSearchResults[i];
+    if (!r) return;
     const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
     _setMapPin(lat, lng);
     _mapApplyGeocodeResult(r, lat, lng);
