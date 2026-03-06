@@ -711,25 +711,11 @@ function calcSurface(s, customerTiles, labourOpts) {
     // Grout sold in 2.5kg bags — primary output
     s.groutBags = Math.ceil(totalGroutKg / 2.5);
 
-    // Levelling clips & wedges
-    // Base: 4 clips per tile (one per corner)
-    // Tiles > 600mm max dim: +1 clip per tile
-    // Tiles ≥ 1200mm max dim: +2 clips per tile (replaces the +1)
+    // Levelling clips & wedges quantities (always computed; cost only if s.clips is ticked)
     const clipsPerTile = maxDim >= 1200 ? 6 : maxDim > 600 ? 5 : 4;
     s.levelClips  = s.tiles * clipsPerTile;
     s.levelWedges = Math.ceil(s.levelClips * 0.25);
 
-    // Clip/wedge cost — only when opted in via s.clips flag
-    s.clipCost = 0;
-    if (s.clips) {
-        const clipBags  = Math.ceil(s.levelClips  / 200);
-        const wedgeBags = Math.ceil(s.levelWedges / 200);
-        const clipRate  = parseFloat(S.clipPrice)  || 12;
-        const wedgeRate = parseFloat(S.wedgePrice) || 8;
-        s.clipCost = (clipBags * clipRate + wedgeBags * wedgeRate) * (1 + S.markup / 100);
-        s.prepCost += s.clipCost;
-        s.prepLines.push(`Levelling Clips: ${s.levelClips} (${clipBags} × 200 bag${clipBags!==1?"s":""}) + Wedges: ${s.levelWedges} (${wedgeBags} × 200 bag${wedgeBags!==1?"s":""}) = £${s.clipCost.toFixed(2)}`);
-    }
 const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     // Price adhesive/grout pro-rata by kg so multiple small surfaces don’t over-round
     const groutCost = (totalGroutKg / 2.5) * S.groutPrice;
@@ -799,6 +785,18 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
         const rate = parseFloat(S.tanking) || 15;
         const c    = s.area * rate;
         s.prepCost += c; s.prepLines.push(`Tanking: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+    }
+
+    // Clip/wedge cost — only when opted in via s.clips flag
+    s.clipCost = 0;
+    if (s.clips) {
+        const clipBags  = Math.ceil(s.levelClips  / 200);
+        const wedgeBags = Math.ceil(s.levelWedges / 200);
+        const clipRate  = parseFloat(S.clipPrice)  || 12;
+        const wedgeRate = parseFloat(S.wedgePrice) || 8;
+        s.clipCost = (clipBags * clipRate + wedgeBags * wedgeRate) * (1 + S.markup / 100);
+        s.prepCost += s.clipCost;
+        s.prepLines.push(`Levelling Clips: ${s.levelClips} (${clipBags} × 200 bag${clipBags!==1?"s":""}) + Wedges: ${s.levelWedges} (${wedgeBags} × 200 bag${wedgeBags!==1?"s":""}) = £${s.clipCost.toFixed(2)}`);
     }
 
     s.total = (s.materialSell + s.labour + s.ufhCost + s.prepCost).toFixed(2);
@@ -1539,6 +1537,8 @@ const subtotal = totalMats + totalLabour + totalPrep + totalExtras + jobSilSell;
             ${addr ? `<br>${esc(addr)}` : ""}
             ${j.email ? `<br>${esc(j.email)}` : ""}
         </div>
+
+        ${j.description ? `<div class="quote-description">${esc(j.description)}</div>` : ""}
 
         ${roomBreakdownRows ? `
         <table class="quote-table">
