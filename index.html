@@ -29,6 +29,7 @@
             <span class="brand-name">TileIQ Pro</span>
         </div>
         <div class="header-actions">
+            <button id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
             <button onclick="goSettings()" class="btn-icon">⚙</button>
             <button onclick="goNewJob()" class="btn-primary">+ New Job</button>
         </div>
@@ -504,6 +505,9 @@
                     <div class="prep-text"><span>Levelling Clips &amp; Wedges</span><span class="prep-cost">+£<span class="pc-clips"></span>/200 clips</span></div>
                 </label>
             </div>
+            <!-- Extra floors -->
+            <div id="extra-floors-list"></div>
+            <button type="button" class="btn-add-surface" onclick="addExtraSurface('floor')">+ Add Another Floor Area</button>
         </div>
 
         <!-- WALL ONLY -->
@@ -555,6 +559,9 @@
                     <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-w"></span>/m²</span></div>
                 </label>
             </div>
+            <!-- Extra walls -->
+            <div id="extra-walls-list"></div>
+            <button type="button" class="btn-add-surface" onclick="addExtraSurface('wall')">+ Add Another Wall</button>
         </div>
 
         <div class="live-total-card">

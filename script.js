@@ -108,8 +108,28 @@ function statusBadge(s) {
     return `<span class="status-badge ${map[s]||''}">${labels[s]||s}</span>`;
 }
 
+/* ─── THEME ─── */
+(function() {
+    const saved = localStorage.getItem("tileiq-theme");
+    if (saved === "dark") document.documentElement.setAttribute("data-theme", "dark");
+})();
+
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("tileiq-theme", next);
+    document.getElementById("theme-toggle").textContent = next === "dark" ? "☀️" : "🌙";
+}
+
 /* ─── BOOT ───────────────────────────────────────────────────── */
-setTimeout(() => { show("screen-dashboard"); renderDashboard(); updatePrepPriceBadges(); }, 800);
+setTimeout(() => {
+    show("screen-dashboard");
+    renderDashboard();
+    updatePrepPriceBadges();
+    const btn = document.getElementById("theme-toggle");
+    if (btn && document.documentElement.getAttribute("data-theme") === "dark") btn.textContent = "☀️";
+}, 800);
 
 /* Fill in the £/m² cost hints on all prep option labels */
 function updatePrepPriceBadges() {
@@ -500,6 +520,9 @@ function clearRoomInputs() {
     document.getElementById("rm-w-grout").value  = 2;
     // Uncheck all preset deduction chips
     document.querySelectorAll(".deduct-chip input[type=checkbox]").forEach(cb => cb.checked = false);
+    // Clear extra surfaces
+    extraSurfaces = [];
+    renderExtraSurfaces();
 }
 
 /* Restore fields when editing an existing room */
@@ -579,6 +602,210 @@ function restoreRoomInputs(room) {
         set("rm-w-grout",  walls[0].grout);
         setCb("rm-w-tanking", walls[0].tanking);
     }
+
+    // Restore extra surfaces (all beyond the primary one)
+    extraSurfaces = [];
+    if (currentSurfType === "floor" && floors.length > 1) {
+        extraSurfaces = floors.slice(1).map(s => ({ ...s, type:"floor" }));
+    } else if (currentSurfType === "wall" && walls.length > 1) {
+        extraSurfaces = walls.slice(1).map(s => ({ ...s, type:"wall" }));
+    }
+    renderExtraSurfaces();
+}
+
+/* ─── EXTRA SURFACES (additional floors / walls) ─── */
+let extraSurfaces = [];   // [{type, label, ...fields}, ...]
+
+function addExtraSurface(type) {
+    const i = extraSurfaces.length;
+    const isFloor = type === "floor";
+    extraSurfaces.push({
+        type,
+        label: isFloor ? `Floor ${i + 2}` : `Wall ${i + 2}`,
+        // floor fields
+        length: "", width: "",
+        tileW: isFloor ? 600 : 300, tileH: isFloor ? 600 : 600,
+        tileThick: isFloor ? 10 : 8, grout: 2, deduct: 0,
+        ufh: false, cementBoard: false, membrane: false, levelling: false,
+        levelDepth: 2, clips: false,
+        // wall fields
+        height: "", tanking: false,
+    });
+    renderExtraSurfaces();
+    // focus the first input of the new card
+    const cards = document.querySelectorAll(".extra-surface-card");
+    if (cards.length) cards[cards.length - 1].querySelector("input")?.focus();
+    rmCalc();
+}
+
+function removeExtraSurface(i) {
+    extraSurfaces.splice(i, 1);
+    renderExtraSurfaces();
+    rmCalc();
+}
+
+function updateExtra(i, field, value) {
+    if (!extraSurfaces[i]) return;
+    const numFields = ["length","width","height","tileW","tileH","tileThick","grout","deduct","levelDepth"];
+    extraSurfaces[i][field] = numFields.includes(field) ? (parseFloat(value) || 0) : value;
+    // show/hide level depth row
+    if (field === "levelling") {
+        const depthRow = document.getElementById(`extra-depth-${i}`);
+        if (depthRow) depthRow.style.display = value ? "" : "none";
+    }
+}
+
+function updateExtraCb(i, field, checked) {
+    if (!extraSurfaces[i]) return;
+    extraSurfaces[i][field] = checked;
+    if (field === "levelling") {
+        const depthRow = document.getElementById(`extra-depth-${i}`);
+        if (depthRow) depthRow.style.display = checked ? "" : "none";
+    }
+    rmCalc();
+}
+
+function renderExtraSurfaces() {
+    const floorContainer = document.getElementById("extra-floors-list");
+    const wallContainer  = document.getElementById("extra-walls-list");
+    if (floorContainer) floorContainer.innerHTML = "";
+    if (wallContainer)  wallContainer.innerHTML  = "";
+
+    extraSurfaces.forEach((s, i) => {
+        const isFloor = s.type === "floor";
+        const container = isFloor ? floorContainer : wallContainer;
+        if (!container) return;
+
+        const html = isFloor ? `
+<div class="extra-surface-card" id="extra-card-${i}">
+  <div class="extra-surface-header">
+    <span class="extra-surface-title">
+      <input type="text" value="${s.label}" style="background:transparent;border:none;border-bottom:1px solid var(--amber);color:var(--amber);font-size:13px;font-weight:700;width:110px;padding:0;"
+        oninput="updateExtra(${i},'label',this.value)">
+    </span>
+    <button class="btn-remove-surface" onclick="removeExtraSurface(${i})" title="Remove">✕</button>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Length (m)</label>
+      <input type="number" step="0.01" value="${s.length||""}" placeholder="e.g. 2.4"
+        oninput="updateExtra(${i},'length',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Width (m)</label>
+      <input type="number" step="0.01" value="${s.width||""}" placeholder="e.g. 1.8"
+        oninput="updateExtra(${i},'width',this.value);rmCalc()"></div>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Tile W (mm)</label>
+      <input type="number" value="${s.tileW}" oninput="updateExtra(${i},'tileW',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Tile H (mm)</label>
+      <input type="number" value="${s.tileH}" oninput="updateExtra(${i},'tileH',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Thick (mm)</label>
+      <input type="number" value="${s.tileThick}" oninput="updateExtra(${i},'tileThick',this.value);rmCalc()"></div>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Grout Joint (mm)</label>
+      <input type="number" value="${s.grout}" oninput="updateExtra(${i},'grout',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Deduction (m²)</label>
+      <input type="number" step="0.01" value="${s.deduct||""}" placeholder="0"
+        oninput="updateExtra(${i},'deduct',this.value);rmCalc()"></div>
+  </div>
+  <label class="checkbox-label" style="margin-bottom:6px;">
+    <input type="checkbox" ${s.ufh?"checked":""} onchange="updateExtraCb(${i},'ufh',this.checked)"> UFH
+  </label>
+  <div class="prep-options">
+    <label class="prep-option">
+      <input type="checkbox" ${s.cementBoard?"checked":""} onchange="updateExtraCb(${i},'cementBoard',this.checked)">
+      <div class="prep-text"><span>Cement Board</span></div></label>
+    <label class="prep-option">
+      <input type="checkbox" ${s.membrane?"checked":""} onchange="updateExtraCb(${i},'membrane',this.checked)">
+      <div class="prep-text"><span>Anti-Crack Membrane</span></div></label>
+    <label class="prep-option">
+      <input type="checkbox" ${s.levelling?"checked":""} onchange="updateExtraCb(${i},'levelling',this.checked)">
+      <div class="prep-text"><span>Levelling Compound</span></div></label>
+    <div id="extra-depth-${i}" style="display:${s.levelling?"":"none"};padding:6px 0 0 8px;">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);">Depth</label>
+      <select onchange="updateExtra(${i},'levelDepth',this.value);rmCalc()">
+        <option value="2" ${s.levelDepth==2?"selected":""}>2 mm</option>
+        <option value="3" ${s.levelDepth==3?"selected":""}>3 mm</option>
+        <option value="4" ${s.levelDepth==4?"selected":""}>4 mm</option>
+      </select>
+    </div>
+    <label class="prep-option">
+      <input type="checkbox" ${s.clips?"checked":""} onchange="updateExtraCb(${i},'clips',this.checked)">
+      <div class="prep-text"><span>Levelling Clips &amp; Wedges</span></div></label>
+  </div>
+</div>` : `
+<div class="extra-surface-card" id="extra-card-${i}">
+  <div class="extra-surface-header">
+    <span class="extra-surface-title">
+      <input type="text" value="${s.label}" style="background:transparent;border:none;border-bottom:1px solid var(--amber);color:var(--amber);font-size:13px;font-weight:700;width:110px;padding:0;"
+        oninput="updateExtra(${i},'label',this.value)">
+    </span>
+    <button class="btn-remove-surface" onclick="removeExtraSurface(${i})" title="Remove">✕</button>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Width (m)</label>
+      <input type="number" step="0.01" value="${s.width||""}" placeholder="e.g. 3.5"
+        oninput="updateExtra(${i},'width',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Height (m)</label>
+      <input type="number" step="0.01" value="${s.height||""}" placeholder="e.g. 2.4"
+        oninput="updateExtra(${i},'height',this.value);rmCalc()"></div>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Tile W (mm)</label>
+      <input type="number" value="${s.tileW}" oninput="updateExtra(${i},'tileW',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Tile H (mm)</label>
+      <input type="number" value="${s.tileH}" oninput="updateExtra(${i},'tileH',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Thick (mm)</label>
+      <input type="number" value="${s.tileThick}" oninput="updateExtra(${i},'tileThick',this.value);rmCalc()"></div>
+  </div>
+  <div class="field-row">
+    <div class="field-group"><label>Grout Joint (mm)</label>
+      <input type="number" value="${s.grout}" oninput="updateExtra(${i},'grout',this.value);rmCalc()"></div>
+    <div class="field-group"><label>Deduction (m²)</label>
+      <input type="number" step="0.01" value="${s.deduct||""}" placeholder="0"
+        oninput="updateExtra(${i},'deduct',this.value);rmCalc()"></div>
+  </div>
+  <div class="prep-options">
+    <label class="prep-option">
+      <input type="checkbox" ${s.tanking?"checked":""} onchange="updateExtraCb(${i},'tanking',this.checked)">
+      <div class="prep-text"><span>Tanking (Waterproofing)</span></div></label>
+  </div>
+</div>`;
+        container.insertAdjacentHTML("beforeend", html);
+    });
+}
+
+function buildExtraSurfaces() {
+    const S = loadSettings();
+    return extraSurfaces
+        .map(s => {
+            if (s.type === "floor") {
+                const L = parseFloat(s.length) || 0;
+                const W = parseFloat(s.width)  || 0;
+                if (!L || !W) return null;
+                return {
+                    type:"floor", label: s.label || "Floor",
+                    length:L, width:W,
+                    tileW:s.tileW||600, tileH:s.tileH||600, tileThick:s.tileThick||10,
+                    grout:s.grout||2, deduct:s.deduct||0,
+                    ufh:!!s.ufh, cementBoard:!!s.cementBoard, membrane:!!s.membrane,
+                    levelling:!!s.levelling, levelDepth:s.levelDepth||2, clips:!!s.clips,
+                    area: Math.max(0, L * W - (parseFloat(s.deduct)||0))
+                };
+            } else {
+                const W = parseFloat(s.width)  || 0;
+                const H = parseFloat(s.height) || 0;
+                if (!W || !H) return null;
+                return {
+                    type:"wall", label: s.label || "Wall",
+                    width:W, height:H,
+                    tileW:s.tileW||300, tileH:s.tileH||600, tileThick:s.tileThick||8,
+                    grout:s.grout||2, tanking:!!s.tanking,
+                    area: Math.max(0, W * H - (parseFloat(s.deduct)||0))
+                };
+            }
+        })
+        .filter(Boolean);
 }
 
 /* ─── BUILD SURFACES from current form fields ─── */
@@ -628,7 +855,7 @@ function buildSurfaces() {
                 area: Math.max(0, L * W - floorDeduct)
             });
         }
-        return surfaces;
+        return [...surfaces, ...buildExtraSurfaces()];
     }
 
     if (currentSurfType === "floor") {
@@ -647,7 +874,7 @@ function buildSurfaces() {
             levelDepth:  parseInt(sv("rm-f-leveldepth")) || 2,
             clips:       cb("rm-f-clips"),
             area: Math.max(0, L * W - fDed)
-        }];
+        }, ...buildExtraSurfaces()];
     }
 
     if (currentSurfType === "wall") {
@@ -662,7 +889,7 @@ function buildSurfaces() {
             grout:   g("rm-w-grout") || 2,
             tanking: cb("rm-w-tanking"),
             area:    Math.max(0, W * H - wDed)
-        }];
+        }, ...buildExtraSurfaces()];
     }
 
     return null;
