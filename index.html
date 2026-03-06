@@ -88,7 +88,10 @@
             <div class="form-section-label" style="margin-top:18px;">Job Details</div>
             <div class="field-group">
                 <label>Job Description (optional)</label>
-                <input id="nj-desc" placeholder="e.g. Kitchen floor + bathroom walls">
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="nj-desc" placeholder="e.g. Kitchen floor + bathroom walls" style="flex:1;">
+                    <button onclick="generateJobDesc('nj-desc','nj-name','nj-address','nj-city')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="AI generate">✨</button>
+                </div>
             </div>
             <div class="field-row">
                 <div class="field-group">
@@ -195,7 +198,10 @@
             <div class="form-section-label" style="margin-top:18px;">Job Details</div>
             <div class="field-group">
                 <label>Job Description</label>
-                <input id="ej-desc">
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="ej-desc" style="flex:1;">
+                    <button onclick="generateJobDesc('ej-desc','ej-name','ej-address','ej-city')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="AI generate">✨</button>
+                </div>
             </div>
             <div class="field-row">
                 <div class="field-group">
