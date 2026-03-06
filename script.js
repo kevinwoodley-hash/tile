@@ -465,6 +465,9 @@ function rmSelectType(type) {
         document.getElementById("rm-form-" + t).classList.toggle("hidden", t !== type);
         document.getElementById("stype-btn-" + t).classList.toggle("stype-active", t === type);
     });
+    // Wall tiles panel only relevant in full-room mode
+    if (type === "room") { openCollapse("walltiles"); updateWallTilesBadge(); }
+    else closeCollapse("walltiles");
     rmCalc();
 }
 
@@ -523,6 +526,8 @@ function clearRoomInputs() {
     // Clear extra surfaces
     extraSurfaces = [];
     renderExtraSurfaces();
+    // Close all collapsible panels
+    ["sealant","extrawork","walltiles"].forEach(closeCollapse);
 }
 
 /* Restore fields when editing an existing room */
@@ -621,6 +626,13 @@ function restoreRoomInputs(room) {
         if (hasWallDeduct || hasFloorDeduct) openDeductPanel("r");
         if (hasFloorDeduct && currentSurfType === "floor") openDeductPanel("f");
         if (hasWallDeductW) openDeductPanel("w");
+        // Auto-open collapsible panels if they have values
+        const hasSealant = (room.sealantEnabled !== false && room.sealantEnabled !== "false") ||
+                           (parseFloat(room.sealantCorners) > 0);
+        const hasExtraWork = room.extraWorkDesc || parseFloat(room.extraWorkCost) > 0;
+        if (hasSealant) openCollapse("sealant");
+        if (hasExtraWork) openCollapse("extrawork");
+        if (currentSurfType === "room") { openCollapse("walltiles"); updateWallTilesBadge(); }
     }, 50);
 }
 
@@ -1224,11 +1236,42 @@ function clearDeducts() {
     });
 }
 
+function toggleCollapse(key) {
+    const panel = document.getElementById("collapse-panel-" + key);
+    const arrow = document.getElementById("collapse-arrow-" + key);
+    if (!panel) return;
+    const open = panel.classList.toggle("hidden") === false;
+    if (arrow) arrow.textContent = open ? "▾" : "▸";
+}
+
+function openCollapse(key) {
+    const panel = document.getElementById("collapse-panel-" + key);
+    const arrow = document.getElementById("collapse-arrow-" + key);
+    if (!panel || !panel.classList.contains("hidden")) return;
+    panel.classList.remove("hidden");
+    if (arrow) arrow.textContent = "▾";
+}
+
+function closeCollapse(key) {
+    const panel = document.getElementById("collapse-panel-" + key);
+    const arrow = document.getElementById("collapse-arrow-" + key);
+    if (!panel) return;
+    panel.classList.add("hidden");
+    if (arrow) arrow.textContent = "▸";
+}
+
+function updateWallTilesBadge() {
+    const badge = document.getElementById("walltiles-badge");
+    if (!badge) return;
+    const w = document.getElementById("rm-r-wtilew")?.value;
+    const h = document.getElementById("rm-r-wtileh")?.value;
+    badge.textContent = (w && h) ? `${w}×${h}mm` : "";
+}
+
+
 function toggleDeductPanel(key) {
     const panel  = document.getElementById("deduct-panel-" + key);
     const toggle = document.getElementById("deduct-toggle-" + key);
-    if (!panel) return;
-    const open = panel.classList.toggle("hidden") === false;
     const arrow = toggle?.querySelector(".deduct-toggle-arrow");
     if (arrow) arrow.textContent = open ? "▾" : "▸";
 }

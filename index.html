@@ -295,7 +295,10 @@
                 <input id="rm-r-height" type="number" step="0.01" placeholder="e.g. 2.4" oninput="rmCalc()">
             </div>
 
-            <div class="divider-label">Sealant (silicone)</div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('sealant')" id="collapse-toggle-sealant">
+                Sealant (silicone) <span class="deduct-toggle-arrow" id="collapse-arrow-sealant">▸</span>
+            </div>
+            <div id="collapse-panel-sealant" class="hidden">
             <div class="field-row">
                 <div class="field-group">
                     <label>Include sealant</label>
@@ -319,8 +322,12 @@
             <div class="small-note" style="margin-top:-6px;">
                 Uses (optional) floor perimeter + (external corners × room height). Floor perimeter is counted once per room.
             </div>
+            </div>
 
-            <div class="divider-label">Extra Work</div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('extrawork')" id="collapse-toggle-extrawork">
+                Extra Work <span class="deduct-toggle-arrow" id="collapse-arrow-extrawork">▸</span>
+            </div>
+            <div id="collapse-panel-extrawork" class="hidden">
             <div class="field-row">
                 <div class="field-group" style="flex:2;">
                     <label>Description</label>
@@ -330,6 +337,7 @@
                     <label>Cost (£)</label>
                     <input id="rm-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
                 </div>
+            </div>
             </div>
 
             <div class="divider-label deduct-toggle" onclick="toggleDeductPanel('r')" id="deduct-toggle-r">
@@ -351,15 +359,19 @@
             <input id="rm-r-deduct" type="hidden" value="0">
             <input id="rm-r-fdeduct" type="hidden" value="0">
 
-            <div class="divider-label">Wall Tiles</div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('walltiles')" id="collapse-toggle-walltiles">
+                Wall Tiles <span class="deduct-toggle-arrow" id="collapse-arrow-walltiles">▸</span>
+                <span id="walltiles-badge" style="font-size:10px;font-weight:600;color:var(--muted);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-walltiles" class="hidden">
             <div class="field-row">
                 <div class="field-group">
                     <label>Tile W (mm)</label>
-                    <input id="rm-r-wtilew" type="number" value="300" oninput="rmCalc()">
+                    <input id="rm-r-wtilew" type="number" value="300" oninput="rmCalc();updateWallTilesBadge()">
                 </div>
                 <div class="field-group">
                     <label>Tile H (mm)</label>
-                    <input id="rm-r-wtileh" type="number" value="600" oninput="rmCalc()">
+                    <input id="rm-r-wtileh" type="number" value="600" oninput="rmCalc();updateWallTilesBadge()">
                 </div>
                 <div class="field-group">
                     <label>Tile Thickness (mm)</label>
@@ -369,6 +381,7 @@
             <div class="field-group">
                 <label>Wall Grout Joint (mm)</label>
                 <input id="rm-r-wgrout" type="number" value="2" oninput="rmCalc()">
+            </div>
             </div>
             <div class="divider-label">Floor</div>
             <label class="checkbox-label" style="margin-bottom:10px;">
