@@ -305,20 +305,12 @@
                 </div>
 
                 <div class="field-group">
-                    <label>Bath/Tray perimeter (m)</label>
-                    <input id="rm-sealant-bath" type="number" step="0.01" placeholder="e.g. 5.0" oninput="rmCalc()">
-                </div>
-                <div class="field-group">
-                    <label>Deductions (m)</label>
-                    <input id="rm-sealant-deduct" type="number" step="0.01" placeholder="e.g. door 0.8" oninput="rmCalc()">
-                </div>
-                <div class="field-group">
                     <label>External corners</label>
                     <input id="rm-sealant-corners" type="number" step="1" min="0" placeholder="e.g. 2" oninput="rmCalc()">
                 </div>
             </div>
             <div class="small-note" style="margin-top:-6px;">
-                Uses (optional) floor perimeter + bath/tray perimeter + (external corners × room height) − deductions. Floor perimeter is counted once per room (no double-up).
+                Uses (optional) floor perimeter + (external corners × room height). Floor perimeter is counted once per room.
             </div>
 
             <div class="divider-label">Extra Work</div>

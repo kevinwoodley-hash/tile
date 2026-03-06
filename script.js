@@ -66,39 +66,34 @@ function uid()     { return Date.now().toString(36) + Math.random().toString(36)
 
 /* ─── SEALANT (silicone) ───────────────────────────────────────
    Calculated per room to avoid double-counting walls/surfaces.
-   Metres = (include floor perimeter ? 2×(L+W) : 0) + bath/tray perimeter + (external corners × room height) − deductions
+   Metres = (include floor perimeter ? 2×(L+W) : 0) + (external corners × room height)
    Tubes  = ceil(metres / settings.siliconeCoverage)
 -----------------------------------------------------------------*/
 function calcSealantRoom(room) {
     if (!room || room.sealantEnabled === false) {
-        return { metres: 0, tubes: 0, floor: 0, bath: 0, corners: 0, deduct: 0 };
+        return { metres: 0, tubes: 0, floor: 0, corners: 0 };
     }
 
     const L = parseFloat(room.length) || 0;
     const W = parseFloat(room.width)  || 0;
     const H = parseFloat(room.height) || 0;
 
-    const bathRaw    = parseFloat(room.sealantBathPerim) || 0;   // m
-    const deductRaw  = parseFloat(room.sealantDeduct)    || 0;   // m
-    const cornersCnt = parseInt(room.sealantCorners)     || 0;
+    const cornersCnt = parseInt(room.sealantCorners) || 0;
 
     const includeFloorPerim = (room.sealantFloorPerim !== false);
     const floorRaw   = (includeFloorPerim && L > 0 && W > 0) ? 2 * (L + W) : 0;
     const cornersRaw = (cornersCnt > 0 && H > 0) ? (cornersCnt * H) : 0;
 
-    const metresRaw = Math.max(0, floorRaw + bathRaw + cornersRaw - deductRaw);
+    const metresRaw = Math.max(0, floorRaw + cornersRaw);
     const coverage  = parseFloat(settings.siliconeCoverage) || 6;
 
     const tubes = metresRaw > 0 ? Math.ceil(metresRaw / coverage) : 0;
 
-    // round components for display
     const floor   = parseFloat(floorRaw.toFixed(1));
-    const bath    = parseFloat(bathRaw.toFixed(1));
     const corners = parseFloat(cornersRaw.toFixed(1));
-    const deduct  = parseFloat(deductRaw.toFixed(1));
     const metres  = parseFloat(metresRaw.toFixed(1));
 
-    return { metres, tubes, floor, bath, corners, deduct };
+    return { metres, tubes, floor, corners };
 }
 
 function statusBadge(s) {
@@ -460,10 +455,8 @@ function clearRoomInputs() {
     document.getElementById("rm-r-inclfloor").checked = true;
     document.getElementById("rm-r-ufh").checked       = false;
     const se = document.getElementById("rm-sealant-enabled"); if (se) se.value = "true";
-    const sb = document.getElementById("rm-sealant-bath"); if (sb) sb.value = "";
-    const sd = document.getElementById("rm-sealant-deduct"); if (sd) sd.value = "";
-    const sc = document.getElementById("rm-sealant-corners"); if (sc) sc.value = "";
     const sf = document.getElementById("rm-sealant-floorperim"); if (sf) sf.checked = true;
+    const sc = document.getElementById("rm-sealant-corners"); if (sc) sc.value = "";
     const exd = document.getElementById("rm-extra-desc"); if (exd) exd.value = "";
     const exc = document.getElementById("rm-extra-cost"); if (exc) exc.value = "";
     document.getElementById("rm-f-ufh").checked       = false;
@@ -508,8 +501,6 @@ function restoreRoomInputs(room) {
 
     // Sealant fields
     set("rm-sealant-enabled", (room.sealantEnabled === false) ? "false" : "true");
-    set("rm-sealant-bath", room.sealantBathPerim || "");
-    set("rm-sealant-deduct", room.sealantDeduct || "");
     set("rm-sealant-corners", room.sealantCorners || "");
     const sf = document.getElementById("rm-sealant-floorperim"); if (sf) sf.checked = (room.sealantFloorPerim !== false);
 
@@ -923,8 +914,6 @@ function readSealantFromForm() {
     return {
         sealantEnabled:   (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false",
         sealantFloorPerim: document.getElementById("rm-sealant-floorperim")?.checked !== false,
-        sealantBathPerim: parseFloat(document.getElementById("rm-sealant-bath")?.value)    || 0,
-        sealantDeduct:    parseFloat(document.getElementById("rm-sealant-deduct")?.value)  || 0,
         sealantCorners:   parseInt(document.getElementById("rm-sealant-corners")?.value)   || 0,
         length: parseFloat(document.getElementById("rm-r-length")?.value) || 0,
         width:  parseFloat(document.getElementById("rm-r-width")?.value)  || 0,
@@ -1028,8 +1017,6 @@ function saveRoom() {
     const area       = parseFloat(totalArea.toFixed(2));
     const sealantEnabled = (document.getElementById("rm-sealant-enabled")?.value || "true") !== "false";
     const sealantFloorPerim = document.getElementById("rm-sealant-floorperim")?.checked !== false;
-    const sealantBathPerim = parseFloat(document.getElementById("rm-sealant-bath")?.value) || 0;
-    const sealantDeduct    = parseFloat(document.getElementById("rm-sealant-deduct")?.value) || 0;
     const sealantCorners   = parseInt(document.getElementById("rm-sealant-corners")?.value) || 0;
 
     const roomLen = parseFloat(document.getElementById("rm-r-length")?.value) || 0;
@@ -1038,7 +1025,7 @@ function saveRoom() {
 
     // Compute sealant cost now so it flows into room.total
     const sealFormObj = currentSurfType === "room" ? {
-        sealantEnabled, sealantFloorPerim, sealantBathPerim, sealantDeduct, sealantCorners,
+        sealantEnabled, sealantFloorPerim, sealantCorners,
         length: roomLen, width: roomWid, height: roomHei
     } : null;
     const roomSealCost = sealFormObj ? calcSealantCost(sealFormObj) : 0;
@@ -1056,8 +1043,6 @@ function saveRoom() {
         height: roomHei || undefined,
         sealantEnabled,
         sealantFloorPerim,
-        sealantBathPerim,
-        sealantDeduct,
         sealantCorners,
         extraWorkDesc: extraWorkDesc || undefined,
         extraWorkCost: extraWorkCost || 0,
