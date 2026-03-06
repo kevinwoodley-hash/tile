@@ -7,6 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -73,7 +75,10 @@
             </div>
             <div class="field-group">
                 <label>Address</label>
-                <input id="nj-address" placeholder="Street address">
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="nj-address" placeholder="Street address" style="flex:1;">
+                    <button type="button" onclick="openMapPicker('nj')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="Drop pin to find address">📍</button>
+                </div>
             </div>
             <div class="field-row">
                 <div class="field-group">
@@ -184,7 +189,10 @@
             </div>
             <div class="field-group">
                 <label>Address</label>
-                <input id="ej-address">
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="ej-address" style="flex:1;">
+                    <button type="button" onclick="openMapPicker('ej')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="Drop pin to find address">📍</button>
+                </div>
             </div>
             <div class="field-row">
                 <div class="field-group">
@@ -817,6 +825,25 @@
             <button onclick="downloadPDF()" class="btn-primary">📄 PDF</button>
         </div>
         <button onclick="exportFreeAgent()" class="btn-secondary" style="width:100%;margin-top:8px;">🔗 FreeAgent Export</button>
+    </div>
+<!-- MAP PICKER MODAL -->
+<div id="map-modal" class="map-modal-overlay hidden" onclick="closeMapPickerOutside(event)">
+    <div class="map-modal-box">
+        <div class="map-modal-header">
+            <span class="map-modal-title">📍 Find Address</span>
+            <button class="map-modal-close" onclick="closeMapPicker()">✕</button>
+        </div>
+        <div class="map-search-row">
+            <input id="map-search-input" type="text" placeholder="Search address or postcode…" class="map-search-input" oninput="mapSearchDebounce()" onkeydown="if(event.key==='Enter')mapSearchNow()">
+            <button class="btn-primary" onclick="mapSearchNow()" style="white-space:nowrap;padding:10px 14px;">Search</button>
+        </div>
+        <div id="map-search-results" class="map-search-results"></div>
+        <div id="map-container" style="height:340px;border-radius:8px;overflow:hidden;"></div>
+        <div id="map-selected-address" class="map-selected-address" style="display:none;"></div>
+        <div class="map-modal-footer">
+            <button class="btn-secondary" onclick="closeMapPicker()">Cancel</button>
+            <button class="btn-primary" id="map-confirm-btn" onclick="confirmMapAddress()" disabled>Use This Address</button>
+        </div>
     </div>
 </div>
 

@@ -2388,3 +2388,146 @@ function downloadPDF() {
         alert("PDF save failed. Open DevTools (F12) → Console and share the error.");
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   MAP PICKER  (Leaflet + OpenStreetMap + Nominatim geocoder)
+═══════════════════════════════════════════════════════════════ */
+let _mapInst = null;       // Leaflet map instance
+let _mapMarker = null;     // current pin
+let _mapTarget = null;     // 'nj' or 'ej'
+let _mapResult = null;     // { address, city, postcode, lat, lng }
+let _mapSearchTimer = null;
+
+function openMapPicker(prefix) {
+    _mapTarget = prefix;
+    _mapResult = null;
+    document.getElementById("map-modal").classList.remove("hidden");
+    document.getElementById("map-search-input").value = "";
+    document.getElementById("map-search-results").innerHTML = "";
+    document.getElementById("map-selected-address").style.display = "none";
+    document.getElementById("map-confirm-btn").disabled = true;
+
+    // Pre-fill search with existing address
+    const addr = document.getElementById(prefix + "-address")?.value;
+    const city = document.getElementById(prefix + "-city")?.value;
+    const post = document.getElementById(prefix + "-postcode")?.value;
+    const prefill = [addr, city, post].filter(Boolean).join(", ");
+    if (prefill) document.getElementById("map-search-input").value = prefill;
+
+    setTimeout(() => {
+        if (!_mapInst) {
+            _mapInst = L.map("map-container").setView([52.5, -1.5], 6);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            }).addTo(_mapInst);
+            _mapInst.on("click", mapHandleClick);
+        } else {
+            _mapInst.invalidateSize();
+        }
+        if (prefill) mapSearchNow();
+        document.getElementById("map-search-input").focus();
+    }, 80);
+}
+
+function closeMapPicker() {
+    document.getElementById("map-modal").classList.add("hidden");
+}
+function closeMapPickerOutside(e) {
+    if (e.target === document.getElementById("map-modal")) closeMapPicker();
+}
+
+async function mapHandleClick(e) {
+    const { lat, lng } = e.latlng;
+    _setMapPin(lat, lng);
+    // Reverse geocode
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+            headers: { "Accept-Language": "en-GB" }
+        });
+        const data = await res.json();
+        _mapApplyGeocodeResult(data, lat, lng);
+    } catch(e) {
+        _mapShowSelected(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, "", "", lat, lng);
+    }
+}
+
+function mapSearchDebounce() {
+    clearTimeout(_mapSearchTimer);
+    _mapSearchTimer = setTimeout(mapSearchNow, 500);
+}
+
+async function mapSearchNow() {
+    const q = document.getElementById("map-search-input").value.trim();
+    if (!q) return;
+    document.getElementById("map-search-results").innerHTML = `<div style="padding:8px;color:var(--muted);font-size:13px;">Searching…</div>`;
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&addressdetails=1&limit=6&countrycodes=gb`;
+        const res = await fetch(url, { headers: { "Accept-Language": "en-GB" } });
+        const results = await res.json();
+        _renderSearchResults(results);
+    } catch(err) {
+        document.getElementById("map-search-results").innerHTML = `<div style="padding:8px;color:#c00;font-size:13px;">Search failed. Check connection.</div>`;
+    }
+}
+
+function _renderSearchResults(results) {
+    const box = document.getElementById("map-search-results");
+    if (!results.length) {
+        box.innerHTML = `<div style="padding:8px;color:var(--muted);font-size:13px;">No results found.</div>`;
+        return;
+    }
+    box.innerHTML = results.map((r, i) => {
+        const label = r.display_name;
+        return `<div class="map-result-item" onclick="_selectResult(${i})">${label}</div>`;
+    }).join("");
+    box._results = results;
+}
+
+function _selectResult(i) {
+    const results = document.getElementById("map-search-results")._results;
+    if (!results) return;
+    const r = results[i];
+    const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+    _setMapPin(lat, lng);
+    _mapApplyGeocodeResult(r, lat, lng);
+    document.getElementById("map-search-results").innerHTML = "";
+}
+
+function _mapApplyGeocodeResult(data, lat, lng) {
+    const a = data.address || {};
+    const road     = a.road || a.pedestrian || a.path || "";
+    const number   = a.house_number ? a.house_number + " " : "";
+    const street   = (number + road).trim();
+    const city     = a.city || a.town || a.village || a.county || "";
+    const postcode = a.postcode || "";
+    _mapShowSelected(street || data.display_name?.split(",")[0] || "", city, postcode, lat, lng);
+}
+
+function _mapShowSelected(street, city, postcode, lat, lng) {
+    _mapResult = { address: street, city, postcode, lat, lng };
+    const parts = [street, city, postcode].filter(Boolean).join(", ");
+    const el = document.getElementById("map-selected-address");
+    el.textContent = "📍 " + (parts || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    el.style.display = "block";
+    document.getElementById("map-confirm-btn").disabled = false;
+}
+
+function _setMapPin(lat, lng) {
+    if (_mapMarker) _mapMarker.setLatLng([lat, lng]);
+    else {
+        _mapMarker = L.marker([lat, lng]).addTo(_mapInst);
+    }
+    _mapInst.setView([lat, lng], 16);
+}
+
+function confirmMapAddress() {
+    if (!_mapResult || !_mapTarget) return;
+    const addrEl    = document.getElementById(_mapTarget + "-address");
+    const cityEl    = document.getElementById(_mapTarget + "-city");
+    const postEl    = document.getElementById(_mapTarget + "-postcode");
+    if (addrEl)  addrEl.value  = _mapResult.address  || "";
+    if (cityEl)  cityEl.value  = _mapResult.city      || "";
+    if (postEl)  postEl.value  = _mapResult.postcode  || "";
+    closeMapPicker();
+}
