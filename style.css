@@ -770,56 +770,23 @@ textarea { resize: vertical; }
 .deduct-chip-manual { border-style: dashed; color: var(--muted); }
 .deduct-chip-manual:hover { color: var(--amber); border-color: var(--amber); }
 
-/* ── Map Picker Modal ── */
-.map-modal-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,.55);
-    display: flex; align-items: center; justify-content: center;
-    padding: 16px;
+
+
+/* ── Postcode Lookup ── */
+.pc-lookup-row {
+    display: flex; gap: 8px; margin: 6px 0 4px;
 }
-.map-modal-box {
-    background: var(--surface);
-    border-radius: var(--radius);
-    width: 100%; max-width: 540px;
-    box-shadow: 0 16px 48px rgba(0,0,0,.3);
-    display: flex; flex-direction: column; gap: 10px;
-    padding: 16px;
-    max-height: 90vh; overflow-y: auto;
+.pc-lookup-input {
+    flex: 1; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; font-size: 14px; color: var(--ink);
+    text-transform: uppercase; letter-spacing: 1px;
 }
-.map-modal-header {
-    display: flex; align-items: center; justify-content: space-between;
+.pc-lookup-input:focus { outline: none; border-color: var(--amber); }
+.pc-result {
+    padding: 8px 12px; border-radius: 8px; font-size: 13px;
+    margin-bottom: 4px;
 }
-.map-modal-title { font-weight: 700; font-size: 15px; }
-.map-modal-close {
-    background: none; border: none; font-size: 18px;
-    cursor: pointer; color: var(--muted); line-height: 1;
-    padding: 2px 6px;
-}
-.map-modal-close:hover { color: var(--ink); }
-.map-search-row { display: flex; gap: 8px; }
-.map-search-input {
-    flex: 1;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
-    font-size: 14px; color: var(--ink);
-}
-.map-search-input:focus { outline: none; border-color: var(--amber); }
-.map-search-results {
-    display: flex; flex-direction: column; gap: 2px;
-    max-height: 160px; overflow-y: auto;
-}
-.map-result-item {
-    padding: 8px 10px; border-radius: 6px;
-    font-size: 13px; cursor: pointer;
-    border: 1px solid var(--border); background: var(--bg);
-}
-.map-result-item:hover { background: var(--amber-lt); border-color: var(--amber); }
-.map-selected-address {
-    padding: 8px 12px; border-radius: 8px;
-    background: var(--amber-lt); border: 1px solid var(--amber);
-    font-size: 13px; font-weight: 600; color: var(--ink);
-}
-.map-modal-footer {
-    display: flex; gap: 8px; justify-content: flex-end;
-    margin-top: 4px;
-}
+.pc-result.hidden { display: none !important; }
+.pc-result.pc-ok  { background: var(--amber-lt); border: 1px solid var(--amber); font-weight: 600; color: var(--ink); }
+.pc-result.pc-err { background: #fff0f0; border: 1px solid #f99; color: #a00; }
