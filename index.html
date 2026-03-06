@@ -74,10 +74,7 @@
             </div>
             <div class="field-group">
                 <label>Address</label>
-                <div style="display:flex;gap:8px;align-items:flex-start;">
-                    <input id="nj-address" placeholder="Street address" style="flex:1;">
-                    <button type="button" onclick="openMapPicker('nj')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="Drop pin to find address">📍</button>
-                </div>
+                <input id="nj-address" placeholder="Street address">
             </div>
             <div class="field-row">
                 <div class="field-group">
@@ -87,6 +84,24 @@
                 <div class="field-group">
                     <label>Postcode</label>
                     <input id="nj-postcode">
+                </div>
+            </div>
+            <!-- Inline address finder -->
+            <div class="addr-finder" id="addr-finder-nj">
+                <div class="addr-finder-toggle" onclick="toggleAddrFinder('nj')">
+                    📍 Find address on map <span id="addr-finder-arrow-nj">▸</span>
+                </div>
+                <div class="addr-finder-body hidden" id="addr-finder-body-nj">
+                    <div class="addr-search-row">
+                        <input id="addr-search-nj" type="text" placeholder="Search postcode or address…" class="addr-search-input" onkeydown="if(event.key==='Enter')addrSearch('nj')">
+                        <button class="btn-primary" onclick="addrSearch('nj')" style="padding:9px 14px;white-space:nowrap;">Search</button>
+                    </div>
+                    <div id="addr-results-nj" class="addr-results"></div>
+                    <div id="addr-map-nj" class="addr-map-container"></div>
+                    <div id="addr-selected-nj" class="addr-selected hidden"></div>
+                    <div id="addr-use-nj" class="hidden" style="margin-top:6px;">
+                        <button class="btn-primary" style="width:100%;" onclick="addrUse('nj')">✓ Use This Address</button>
+                    </div>
                 </div>
             </div>
 
@@ -188,10 +203,7 @@
             </div>
             <div class="field-group">
                 <label>Address</label>
-                <div style="display:flex;gap:8px;align-items:flex-start;">
-                    <input id="ej-address" style="flex:1;">
-                    <button type="button" onclick="openMapPicker('ej')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="Drop pin to find address">📍</button>
-                </div>
+                <input id="ej-address">
             </div>
             <div class="field-row">
                 <div class="field-group">
@@ -201,6 +213,24 @@
                 <div class="field-group">
                     <label>Postcode</label>
                     <input id="ej-postcode">
+                </div>
+            </div>
+            <!-- Inline address finder -->
+            <div class="addr-finder" id="addr-finder-ej">
+                <div class="addr-finder-toggle" onclick="toggleAddrFinder('ej')">
+                    📍 Find address on map <span id="addr-finder-arrow-ej">▸</span>
+                </div>
+                <div class="addr-finder-body hidden" id="addr-finder-body-ej">
+                    <div class="addr-search-row">
+                        <input id="addr-search-ej" type="text" placeholder="Search postcode or address…" class="addr-search-input" onkeydown="if(event.key==='Enter')addrSearch('ej')">
+                        <button class="btn-primary" onclick="addrSearch('ej')" style="padding:9px 14px;white-space:nowrap;">Search</button>
+                    </div>
+                    <div id="addr-results-ej" class="addr-results"></div>
+                    <div id="addr-map-ej" class="addr-map-container"></div>
+                    <div id="addr-selected-ej" class="addr-selected hidden"></div>
+                    <div id="addr-use-ej" class="hidden" style="margin-top:6px;">
+                        <button class="btn-primary" style="width:100%;" onclick="addrUse('ej')">✓ Use This Address</button>
+                    </div>
                 </div>
             </div>
             <div class="form-section-label" style="margin-top:18px;">Job Details</div>
@@ -825,26 +855,6 @@
         </div>
         <button onclick="exportFreeAgent()" class="btn-secondary" style="width:100%;margin-top:8px;">🔗 FreeAgent Export</button>
     </div>
-<!-- MAP PICKER MODAL -->
-<div id="map-modal" class="map-modal-overlay hidden" onclick="closeMapPickerOutside(event)">
-    <div class="map-modal-box">
-        <div class="map-modal-header">
-            <span class="map-modal-title">📍 Find Address</span>
-            <button class="map-modal-close" onclick="closeMapPicker()">✕</button>
-        </div>
-        <div class="map-search-row">
-            <input id="map-search-input" type="text" placeholder="Search address or postcode…" class="map-search-input" oninput="mapSearchDebounce()" onkeydown="if(event.key==='Enter')mapSearchNow()">
-            <button class="btn-primary" onclick="mapSearchNow()" style="white-space:nowrap;padding:10px 14px;">Search</button>
-        </div>
-        <div id="map-search-results" class="map-search-results"></div>
-        <div id="map-container" style="height:340px;border-radius:8px;overflow:hidden;"></div>
-        <div id="map-selected-address" class="map-selected-address" style="display:none;"></div>
-        <div class="map-modal-footer">
-            <button class="btn-secondary" onclick="closeMapPicker()">Cancel</button>
-            <button class="btn-primary" id="map-confirm-btn" onclick="confirmMapAddress()" disabled>Use This Address</button>
-        </div>
-    </div>
-</div>
 
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
