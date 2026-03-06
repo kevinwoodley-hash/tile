@@ -611,6 +611,16 @@ function restoreRoomInputs(room) {
         extraSurfaces = walls.slice(1).map(s => ({ ...s, type:"wall" }));
     }
     renderExtraSurfaces();
+    // Auto-open deductions panel if room has deductions
+    setTimeout(() => {
+        const hasWallDeduct = parseFloat(document.getElementById("rm-r-deduct")?.value) > 0;
+        const hasFloorDeduct = parseFloat(document.getElementById("rm-r-fdeduct")?.value) > 0 ||
+                               parseFloat(document.getElementById("rm-f-deduct")?.value)  > 0;
+        const hasWallDeductW = parseFloat(document.getElementById("rm-w-deduct")?.value) > 0;
+        if (hasWallDeduct || hasFloorDeduct) openDeductPanel("r");
+        if (hasFloorDeduct && currentSurfType === "floor") openDeductPanel("f");
+        if (hasWallDeductW) openDeductPanel("w");
+    }, 50);
 }
 
 /* ─── EXTRA SURFACES (additional floors / walls) ─── */
@@ -676,6 +686,8 @@ function renderExtraSurfaces() {
         const container = isFloor ? floorContainer : wallContainer;
         if (!container) return;
 
+        const showClips = isFloor && Math.max(s.tileW || 0, s.tileH || 0) >= 300;
+
         const html = isFloor ? `
 <div class="extra-surface-card" id="extra-card-${i}">
   <div class="extra-surface-header">
@@ -695,15 +707,24 @@ function renderExtraSurfaces() {
   </div>
   <div class="field-row">
     <div class="field-group"><label>Tile W (mm)</label>
-      <input type="number" value="${s.tileW}" oninput="updateExtra(${i},'tileW',this.value);rmCalc()"></div>
+      <input type="number" value="${s.tileW}" id="extra-tilew-${i}"
+        oninput="updateExtra(${i},'tileW',this.value);rmCalc()"></div>
     <div class="field-group"><label>Tile H (mm)</label>
-      <input type="number" value="${s.tileH}" oninput="updateExtra(${i},'tileH',this.value);rmCalc()"></div>
+      <input type="number" value="${s.tileH}" id="extra-tileh-${i}"
+        oninput="updateExtra(${i},'tileH',this.value);rmCalc()"></div>
     <div class="field-group"><label>Thick (mm)</label>
-      <input type="number" value="${s.tileThick}" oninput="updateExtra(${i},'tileThick',this.value);rmCalc()"></div>
+      <input type="number" value="${s.tileThick}"
+        oninput="updateExtra(${i},'tileThick',this.value);rmCalc()"></div>
   </div>
   <div class="field-row">
     <div class="field-group"><label>Grout Joint (mm)</label>
       <input type="number" value="${s.grout}" oninput="updateExtra(${i},'grout',this.value);rmCalc()"></div>
+  </div>
+  <div class="extra-deduct-toggle" onclick="toggleExtraDeduct(${i})" id="extra-deduct-toggle-${i}"
+    style="font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;padding:4px 0;user-select:none;">
+    Deductions <span id="extra-deduct-arrow-${i}">▸</span>${s.deduct > 0 ? ` <span style="color:var(--red);margin-left:4px;">−${s.deduct}m²</span>` : ""}
+  </div>
+  <div id="extra-deduct-panel-${i}" style="display:${s.deduct>0?"":"none"};padding:4px 0 6px 0;">
     <div class="field-group"><label>Deduction (m²)</label>
       <input type="number" step="0.01" value="${s.deduct||""}" placeholder="0"
         oninput="updateExtra(${i},'deduct',this.value);rmCalc()"></div>
@@ -729,9 +750,11 @@ function renderExtraSurfaces() {
         <option value="4" ${s.levelDepth==4?"selected":""}>4 mm</option>
       </select>
     </div>
-    <label class="prep-option">
-      <input type="checkbox" ${s.clips?"checked":""} onchange="updateExtraCb(${i},'clips',this.checked)">
-      <div class="prep-text"><span>Levelling Clips &amp; Wedges</span></div></label>
+    <div id="extra-clips-row-${i}" style="display:${showClips?"":"none"}">
+      <label class="prep-option">
+        <input type="checkbox" ${s.clips?"checked":""} onchange="updateExtraCb(${i},'clips',this.checked)">
+        <div class="prep-text"><span>Levelling Clips &amp; Wedges</span></div></label>
+    </div>
   </div>
 </div>` : `
 <div class="extra-surface-card" id="extra-card-${i}">
@@ -761,6 +784,12 @@ function renderExtraSurfaces() {
   <div class="field-row">
     <div class="field-group"><label>Grout Joint (mm)</label>
       <input type="number" value="${s.grout}" oninput="updateExtra(${i},'grout',this.value);rmCalc()"></div>
+  </div>
+  <div class="extra-deduct-toggle" onclick="toggleExtraDeduct(${i})" id="extra-deduct-toggle-${i}"
+    style="font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;padding:4px 0;user-select:none;">
+    Deductions <span id="extra-deduct-arrow-${i}">▸</span>${s.deduct > 0 ? ` <span style="color:var(--red);margin-left:4px;">−${s.deduct}m²</span>` : ""}
+  </div>
+  <div id="extra-deduct-panel-${i}" style="display:${s.deduct>0?"":"none"};padding:4px 0 6px 0;">
     <div class="field-group"><label>Deduction (m²)</label>
       <input type="number" step="0.01" value="${s.deduct||""}" placeholder="0"
         oninput="updateExtra(${i},'deduct',this.value);rmCalc()"></div>
@@ -772,6 +801,31 @@ function renderExtraSurfaces() {
   </div>
 </div>`;
         container.insertAdjacentHTML("beforeend", html);
+    });
+}
+
+function toggleExtraDeduct(i) {
+    const panel = document.getElementById(`extra-deduct-panel-${i}`);
+    const arrow = document.getElementById(`extra-deduct-arrow-${i}`);
+    if (!panel) return;
+    const isHidden = panel.style.display === "none";
+    panel.style.display = isHidden ? "" : "none";
+    if (arrow) arrow.textContent = isHidden ? "▾" : "▸";
+}
+
+function updateExtraClipsVisibility(surfaces) {
+    extraSurfaces.forEach((s, i) => {
+        if (s.type !== "floor") return;
+        const row = document.getElementById(`extra-clips-row-${i}`);
+        if (!row) return;
+        const maxDim = Math.max(s.tileW || 0, s.tileH || 0);
+        const show   = maxDim >= 300;
+        row.style.display = show ? "" : "none";
+        if (!show) {
+            const cb = row.querySelector("input[type=checkbox]");
+            if (cb) cb.checked = false;
+            extraSurfaces[i].clips = false;
+        }
     });
 }
 
@@ -1159,6 +1213,31 @@ function clearDeducts() {
     wallDeducts  = [];
     floorDeducts = [];
     renderDeducts();
+    // close all deduct panels
+    ["r","f","w"].forEach(k => {
+        const p = document.getElementById("deduct-panel-"+k);
+        const t = document.getElementById("deduct-toggle-"+k);
+        if (p) p.classList.add("hidden");
+        if (t) { const a = t.querySelector(".deduct-toggle-arrow"); if (a) a.textContent = "▸"; }
+    });
+}
+
+function toggleDeductPanel(key) {
+    const panel  = document.getElementById("deduct-panel-" + key);
+    const toggle = document.getElementById("deduct-toggle-" + key);
+    if (!panel) return;
+    const open = panel.classList.toggle("hidden") === false;
+    const arrow = toggle?.querySelector(".deduct-toggle-arrow");
+    if (arrow) arrow.textContent = open ? "▾" : "▸";
+}
+
+function openDeductPanel(key) {
+    const panel  = document.getElementById("deduct-panel-" + key);
+    const toggle = document.getElementById("deduct-toggle-" + key);
+    if (!panel || !panel.classList.contains("hidden")) return;
+    panel.classList.remove("hidden");
+    const arrow = toggle?.querySelector(".deduct-toggle-arrow");
+    if (arrow) arrow.textContent = "▾";
 }
 
 /* ─── SEALANT COST (with markup) for a room or form-state object ─── */
@@ -1193,6 +1272,19 @@ function rmCalc() {
         document.getElementById("rm-breakdown").innerHTML = "";
         return;
     }
+
+    // Show clips option only when floor tile max dim ≥ 300mm
+    const floorSurfs = surfaces.filter(s => s.type === "floor");
+    const showClips = floorSurfs.some(s => Math.max(s.tileW || 0, s.tileH || 0) >= 300);
+    ["rm-r-clips-row","rm-f-clips-row"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("hidden", !showClips);
+        if (!showClips) {
+            const cb = el?.querySelector("input[type=checkbox]");
+            if (cb) cb.checked = false;
+        }
+    });
+    updateExtraClipsVisibility(surfaces);
 
     const totalArea = surfaces.reduce((a, s) => a + s.area, 0);
     let labourOpts = null;
