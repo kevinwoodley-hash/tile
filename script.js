@@ -8,7 +8,8 @@
 let jobs     = JSON.parse(localStorage.getItem("tileiq-jobs"))     || [];
 let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     tilePrice:     25.00,
-    groutPrice:    4.50,
+    groutPrice25:  4.50,  // £ per 2.5kg bag
+    groutPrice5:   7.50,  // £ per 5kg bag
     groutBagSize:  2.5,   // kg per bag (2.5 or 5)
     adhesivePrice: 22,
     siliconePrice: 6.50,
@@ -712,7 +713,8 @@ function calcSurface(s, customerTiles, labourOpts) {
     s.groutKg   = parseFloat(totalGroutKg.toFixed(2));
 
     // Grout bags — size configurable in settings (2.5kg or 5kg)
-    const bagSize = parseFloat(S.groutBagSize) || 2.5;
+    const bagSize   = parseFloat(S.groutBagSize) || 2.5;
+    const bagPrice  = bagSize >= 5 ? (parseFloat(S.groutPrice5) || 7.50) : (parseFloat(S.groutPrice25) || 4.50);
     s.groutBags = Math.ceil(totalGroutKg / bagSize);
 
     // Levelling clips & wedges quantities (always computed; cost only if s.clips is ticked)
@@ -722,7 +724,7 @@ function calcSurface(s, customerTiles, labourOpts) {
 
 const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     // Price adhesive/grout pro-rata by kg
-    const groutCost = (totalGroutKg / bagSize) * S.groutPrice;
+    const groutCost = (totalGroutKg / bagSize) * bagPrice;
     const adhCost   = (s.adhKg / 20) * S.adhesivePrice;
     const matRaw    = tileCost + groutCost + adhCost;
     const mult     = 1 + S.markup / 100;
@@ -1115,8 +1117,9 @@ function saveRoom() {
 function goSettings() {
     const s = settings;
     document.getElementById("set-tile-price").value     = s.tilePrice;
-    document.getElementById("set-grout-price").value    = s.groutPrice;
-    document.getElementById("set-grout-bag-size").value = s.groutBagSize || 2.5;
+    document.getElementById("set-grout-price-25").value  = s.groutPrice25 || 4.50;
+    document.getElementById("set-grout-price-5").value   = s.groutPrice5  || 7.50;
+    document.getElementById("set-grout-bag-size").value  = s.groutBagSize || 2.5;
     document.getElementById("set-adhesive-price").value = s.adhesivePrice;
     document.getElementById("set-silicone-price").value = s.siliconePrice || 6.50;
     document.getElementById("set-silicone-coverage").value = s.siliconeCoverage || 6;
@@ -1149,8 +1152,9 @@ function goSettings() {
 function saveSettings() {
     settings = {
         tilePrice:     parseFloat(document.getElementById("set-tile-price").value)     || 25.00,
-        groutPrice:    parseFloat(document.getElementById("set-grout-price").value)    || 4.50,
-        groutBagSize:  parseFloat(document.getElementById("set-grout-bag-size").value) || 2.5,
+        groutPrice25:  parseFloat(document.getElementById("set-grout-price-25").value)  || 4.50,
+        groutPrice5:   parseFloat(document.getElementById("set-grout-price-5").value)   || 7.50,
+        groutBagSize:  parseFloat(document.getElementById("set-grout-bag-size").value)  || 2.5,
         adhesivePrice: parseFloat(document.getElementById("set-adhesive-price").value) || 22,
         siliconePrice: parseFloat(document.getElementById("set-silicone-price").value) || 6.50,
         siliconeCoverage: parseFloat(document.getElementById("set-silicone-coverage").value) || 6,
@@ -1398,7 +1402,7 @@ function renderQuote() {
 
         // Per-item sell values (kept simple: uses current unit assumptions in settings)
         const adhSell   = adhBags   * (parseFloat(settings.adhesivePrice) || 0) * mult;
-        const groutSell = groutBags * 2.5 * (parseFloat(settings.groutPrice) || 0) * mult;
+        const groutSell = groutBags * (settings.groutBagSize >= 5 ? (parseFloat(settings.groutPrice5)||7.50) : (parseFloat(settings.groutPrice25)||4.50)) * mult;
 
         // Prep-related items use existing £/m² rates (matches current prep model)
         const cbSell = surfaces.reduce((a, s) => {
@@ -1500,8 +1504,8 @@ const roomTotal = parseFloat(room.total || 0);
     const totalFloorGroutBags = Math.ceil(totalFloorGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
 
     const jobAdhSell        = totalAdhBags * (parseFloat(settings.adhesivePrice) || 0) * multJob;
-    const jobWallGroutSell  = totalWallGroutBags * (parseFloat(settings.groutPrice) || 0) * multJob;
-    const jobFloorGroutSell = totalFloorGroutBags * (parseFloat(settings.groutPrice) || 0) * multJob;
+    const jobWallGroutSell  = totalWallGroutBags * (settings.groutBagSize >= 5 ? (parseFloat(settings.groutPrice5)||7.50) : (parseFloat(settings.groutPrice25)||4.50)) * multJob;
+    const jobFloorGroutSell = totalFloorGroutBags * (settings.groutBagSize >= 5 ? (parseFloat(settings.groutPrice5)||7.50) : (parseFloat(settings.groutPrice25)||4.50)) * multJob;
 
     const totalGroutBags = totalWallGroutBags + totalFloorGroutBags;
     const totalGroutKg   = totalWallGroutKg   + totalFloorGroutKg;
