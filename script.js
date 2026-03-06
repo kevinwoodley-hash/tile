@@ -1832,40 +1832,45 @@ function downloadPDF() {
     y += 9;
 
     let subtotal = 0;
+    let grandLabour = 0;
+    let grandMaterials = 0;
     doc.setFont("helvetica","normal");
     (j.rooms || []).forEach(room => {
+        const surfaces = room.surfaces || [];
+
+        // Recalculate to get fresh labour/material splits
+        const ct = room.tileSupply === "customer";
+        const totalArea = surfaces.reduce((a, s) => a + (s.area || 0), 0);
+        let labourOpts = null;
+        if (room.labourType === "day") {
+            labourOpts = { type:"day", days: room.days || 1, dayRate: room.dayRate || settings.dayRate || 200, totalArea };
+        }
+        surfaces.forEach(s => calcSurface(s, ct, labourOpts));
+
+        const roomMats   = surfaces.reduce((a, s) => a + (s.materialSell || 0), 0);
+        const roomLabour = surfaces.reduce((a, s) => a + (s.labour || 0) + (s.ufhCost || 0), 0);
+        const roomPrep   = surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
+        const extraCost  = parseFloat(room.extraWorkCost || 0);
+        const sealCost   = calcSealantCost(room);
+        const roomTotal  = roomMats + roomLabour + roomPrep + extraCost + sealCost;
+
+        grandMaterials += roomMats + roomPrep + sealCost;
+        grandLabour    += roomLabour;
+        subtotal       += roomTotal;
+
         doc.setTextColor(...dark);
         doc.setFont("helvetica","bold");
         doc.setFontSize(8);
         doc.text(room.name, 17, y);
+        doc.text(`${totalArea.toFixed(2)} m²`, 145, y);
+        doc.text(`£${roomTotal.toFixed(2)}`, W - 14, y, { align:"right" });
         y += 5;
-        (room.surfaces || []).forEach(s => {
-            doc.setFont("helvetica","normal");
-            doc.setTextColor(...mid);
-            doc.text(`  ${s.label}`, 17, y);
-            doc.text(`${s.area.toFixed(2)} m²`, 145, y);
-            const cost = parseFloat(s.total || 0);
-            subtotal += cost;
-            doc.text(`£${cost.toFixed(2)}`, W - 14, y, { align:"right" });
-            y += 5;
-        });
-        const extraCost = parseFloat(room.extraWorkCost || 0);
+
         if (extraCost > 0) {
             doc.setFont("helvetica","normal");
             doc.setTextColor(...mid);
             doc.text(`  ${room.extraWorkDesc || "Extra work"}`, 17, y);
             doc.text(`£${extraCost.toFixed(2)}`, W - 14, y, { align:"right" });
-            subtotal += extraCost;
-            y += 5;
-        }
-        const pdfSealCost = calcSealantCost(room);
-        if (pdfSealCost > 0) {
-            const pdfSealTubes = calcSealantRoom(room).tubes;
-            doc.setFont("helvetica","normal");
-            doc.setTextColor(...mid);
-            doc.text(`  Sealant (${pdfSealTubes} tube${pdfSealTubes !== 1 ? "s" : ""})`, 17, y);
-            doc.text(`£${pdfSealCost.toFixed(2)}`, W - 14, y, { align:"right" });
-            subtotal += pdfSealCost;
             y += 5;
         }
         y += 2;
@@ -1877,9 +1882,19 @@ function downloadPDF() {
     doc.setLineWidth(0.5);
     doc.line(14, y, W - 14, y);
     y += 6;
-    doc.setTextColor(...dark);
+    doc.setTextColor(...mid);
     doc.setFont("helvetica","normal");
     doc.setFontSize(9);
+    doc.text("Materials & Prep", W - 55, y);
+    doc.text(`£${grandMaterials.toFixed(2)}`, W - 14, y, { align:"right" });
+    y += 5;
+    doc.text("Labour", W - 55, y);
+    doc.text(`£${grandLabour.toFixed(2)}`, W - 14, y, { align:"right" });
+    y += 5;
+    doc.setDrawColor(...amber);
+    doc.line(W - 55, y, W - 14, y);
+    y += 5;
+    doc.setTextColor(...dark);
     doc.text("Subtotal", W - 55, y);
     doc.text(`£${subtotal.toFixed(2)}`, W - 14, y, { align:"right" });
     if (applyVat) {
