@@ -1573,19 +1573,37 @@ const subtotal = totalMats + totalLabour + totalPrep + totalExtras + jobSilSell;
 
 /* ─── AI CORE ─── */
 async function callAnthropicAI(prompt) {
-    const resp = await fetch("/api/ai-description", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-    });
-    if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        const msg = err?.error || `API error ${resp.status}`;
-        const debug = err?.debug ? `\n${err.debug}` : "";
-        throw new Error(msg + debug);
+    let apiKey = sessionStorage.getItem("tileiq-api-key");
+    if (!apiKey) {
+        apiKey = window.prompt("Enter your Anthropic API key (stored for this session only):");
+        if (!apiKey) throw new Error("No API key provided.");
+        sessionStorage.setItem("tileiq-api-key", apiKey.trim());
     }
+
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey.trim(),
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 400,
+            messages: [{ role: "user", content: prompt }]
+        })
+    });
+
+    if (!resp.ok) {
+        // If auth failed, clear stored key so user can re-enter
+        if (resp.status === 401) sessionStorage.removeItem("tileiq-api-key");
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `API error ${resp.status}`);
+    }
+
     const data = await resp.json();
-    return data?.text || "";
+    return data?.content?.[0]?.text || "";
 }
 
 /* ─── Quote AI Description ─── */
