@@ -1,0 +1,33 @@
+{
+  "appId": "com.tileiq.pro",
+  "appName": "TileIQ Pro",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#1C1C1E",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "iosSpinnerStyle": "small",
+      "spinnerColor": "#E6AF2E"
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#1C1C1E"
+    }
+  },
+  "android": {
+    "buildOptions": {
+      "minSdkVersion": 22,
+      "targetSdkVersion": 34
+    }
+  },
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

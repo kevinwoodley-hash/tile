@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TileIQ Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen">
+    <div class="loading-center">
+        <div class="logo-mark">⬛</div>
+        <div class="logo-text">TileIQ Pro</div>
+        <div class="loading-bar"><div class="loading-fill"></div></div>
+    </div>
+</div>
+
+<!-- SIGN IN -->
+<div id="screen-signin" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Sign in</h2>
+            <div id="signin-error" class="auth-error hidden"></div>
+            <div class="field-group"><label>Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+            <div class="field-group"><label>Password</label><input id="si-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+            <button onclick="authSignIn()" class="btn-primary auth-btn" id="si-submit">Sign in</button>
+            <div class="auth-links">
+                <a href="#" onclick="showForgot();return false;">Forgot password?</a>
+                <span class="auth-sep">·</span>
+                <a href="#" onclick="show('screen-signup');return false;">Create account</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIGN UP -->
+<div id="screen-signup" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Create account</h2>
+            <div id="signup-error" class="auth-error hidden"></div>
+            <div class="field-group"><label>Name</label><input id="su-name" type="text" autocomplete="name" placeholder="Your name"></div>
+            <div class="field-group"><label>Email</label><input id="su-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+            <div class="field-group"><label>Password</label><input id="su-password" type="password" autocomplete="new-password" placeholder="Min. 6 characters"></div>
+            <button onclick="authSignUp()" class="btn-primary auth-btn" id="su-submit">Create account</button>
+            <div class="auth-links">
+                <a href="#" onclick="show('screen-signin');return false;">Already have an account? Sign in</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VERIFY EMAIL -->
+<div id="screen-verify" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card" style="text-align:center;">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <div style="font-size:48px;margin:16px 0;">📬</div>
+            <h2 class="auth-title">Check your inbox</h2>
+            <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">We've sent a verification link to <strong id="verify-email-display"></strong>. Click it to activate your account then come back here.</p>
+            <button onclick="show('screen-signin')" class="btn-secondary auth-btn">Back to sign in</button>
+        </div>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD -->
+<div id="screen-forgot" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Reset password</h2>
+            <div id="forgot-msg" class="auth-error hidden"></div>
+            <div class="field-group"><label>Email</label><input id="fp-email" type="email" placeholder="you@example.com"></div>
+            <button onclick="authForgot()" class="btn-primary auth-btn">Send reset link</button>
+            <div class="auth-links"><a href="#" onclick="show('screen-signin');return false;">Back to sign in</a></div>
+        </div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dashboard" class="screen hidden">
+    <header class="app-header">
+        <div class="header-brand">
+            <span class="brand-icon">⬛</span>
+            <span class="brand-name">TileIQ Pro</span>
+        </div>
+        <div class="header-actions">
+            <button id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
+            <button onclick="goSettings()" class="btn-icon">⚙</button>
+            <button onclick="authSignOut()" class="btn-icon" title="Sign out">⎋</button>
+            <button onclick="goNewJob()" class="btn-primary">+ New Job</button>
+        </div>
+    </header>
+    <div class="page-body">
+        <div class="page-title-row">
+            <h2 class="page-title">Jobs</h2>
+            <span id="job-count" class="badge">0</span>
+        </div>
+        <div id="jobs-list"></div>
+        <div id="jobs-empty" class="empty-state hidden">
+            <div class="empty-icon">📋</div>
+            <p>No jobs yet — tap + New Job to start.</p>
+        </div>
+    </div>
+</div>
+
+<!-- NEW JOB -->
+<div id="screen-new-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Back</button>
+        <h2 class="header-title">New Job</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Customer Details</div>
+            <div class="field-group">
+                <label>Customer Name *</label>
+                <input id="nj-name" placeholder="Full name">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Phone</label>
+                    <input id="nj-phone" type="tel" placeholder="07xxx xxxxxx">
+                </div>
+                <div class="field-group">
+                    <label>Email</label>
+                    <input id="nj-email" type="email" placeholder="name@email.com">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Address</label>
+                <input id="nj-address" placeholder="Street address">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Town / City</label>
+                    <input id="nj-city">
+                </div>
+                <div class="field-group">
+                    <label>Postcode</label>
+                    <input id="nj-postcode">
+                </div>
+            </div>
+            <!-- Postcode lookup -->
+            <div class="pc-lookup-row">
+                <input id="pc-input-nj" type="text" placeholder="Enter postcode…" class="pc-lookup-input" maxlength="8" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')pcLookup('nj')">
+                <button class="btn-secondary" onclick="pcLookup('nj')" style="white-space:nowrap;padding:9px 14px;">🔍 Find</button>
+            </div>
+            <div id="pc-result-nj" class="pc-result hidden"></div>
+
+            <div class="form-section-label" style="margin-top:18px;">Job Details</div>
+            <div class="field-group">
+                <label>Job Description (optional)</label>
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="nj-desc" placeholder="e.g. Kitchen floor + bathroom walls" style="flex:1;">
+                    <button onclick="generateJobDesc('nj-desc','nj-name','nj-address','nj-city')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="AI generate">✨</button>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Status</label>
+                    <select id="nj-status">
+                        <option value="enquiry">Enquiry</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Tile Supply</label>
+                    <select id="nj-supply">
+                        <option value="contractor">We supply tiles</option>
+                        <option value="customer">Customer supplies</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button onclick="goDashboard()" class="btn-secondary">Cancel</button>
+                <button onclick="createJob()" class="btn-primary">Next: Add Rooms →</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JOB VIEW -->
+<div id="screen-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Jobs</button>
+        <h2 id="job-header-title" class="header-title"></h2>
+        <button onclick="goAddRoom()" class="btn-primary">+ Room</button>
+    </header>
+    <div class="page-body">
+        <div id="job-customer-bar" class="customer-bar"></div>
+        <div class="section-heading-row">
+            <span class="form-section-label" style="margin:0;">Rooms</span>
+        </div>
+        <div id="job-rooms-list"></div>
+        <div id="job-rooms-empty" class="empty-state-small">
+            Tap <strong>+ Room</strong> above to add your first room.
+        </div>
+        <div id="job-running-total" class="running-total hidden"></div>
+        <div class="job-actions">
+            <button onclick="goEditJob()" class="btn-secondary">✏ Edit Details</button>
+            <button onclick="goMaterials()" class="btn-secondary">📦 Materials</button>
+            <button onclick="goQuote()" class="btn-primary">Quote →</button>
+        </div>
+        <button onclick="deleteJob()" class="btn-danger">🗑 Delete Job</button>
+    </div>
+</div>
+
+<!-- MATERIALS BREAKDOWN -->
+<div id="screen-materials" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Materials</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div id="materials-output"></div>
+    </div>
+</div>
+
+<!-- EDIT JOB -->
+<div id="screen-edit-job" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Edit Job</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Customer Details</div>
+            <div class="field-group">
+                <label>Customer Name *</label>
+                <input id="ej-name">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Phone</label>
+                    <input id="ej-phone" type="tel">
+                </div>
+                <div class="field-group">
+                    <label>Email</label>
+                    <input id="ej-email" type="email">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Address</label>
+                <input id="ej-address">
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Town / City</label>
+                    <input id="ej-city">
+                </div>
+                <div class="field-group">
+                    <label>Postcode</label>
+                    <input id="ej-postcode">
+                </div>
+            </div>
+            <!-- Postcode lookup -->
+            <div class="pc-lookup-row">
+                <input id="pc-input-ej" type="text" placeholder="Enter postcode…" class="pc-lookup-input" maxlength="8" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')pcLookup('ej')">
+                <button class="btn-secondary" onclick="pcLookup('ej')" style="white-space:nowrap;padding:9px 14px;">🔍 Find</button>
+            </div>
+            <div id="pc-result-ej" class="pc-result hidden"></div>
+            <div class="form-section-label" style="margin-top:18px;">Job Details</div>
+            <div class="field-group">
+                <label>Job Description</label>
+                <div style="display:flex;gap:8px;align-items:flex-start;">
+                    <input id="ej-desc" style="flex:1;">
+                    <button onclick="generateJobDesc('ej-desc','ej-name','ej-address','ej-city')" class="btn-secondary" style="white-space:nowrap;padding:10px 12px;" title="AI generate">✨</button>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Status</label>
+                    <select id="ej-status">
+                        <option value="enquiry">Enquiry</option>
+                        <option value="quoted">Quoted</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <label>Tile Supply</label>
+                    <select id="ej-supply">
+                        <option value="contractor">We supply tiles</option>
+                        <option value="customer">Customer supplies</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button onclick="goJob()" class="btn-secondary">Cancel</button>
+                <button onclick="saveEditJob()" class="btn-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROOM EDITOR -->
+<div id="screen-room" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Rooms</button>
+        <h2 id="room-screen-title" class="header-title">Add Room</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+
+        <div class="form-card" style="margin-bottom:14px;">
+            <div class="field-group" style="margin-bottom:10px;">
+                <label>Room Name *</label>
+                <input id="rm-name" placeholder="e.g. Main Bathroom">
+            </div>
+            <label class="checkbox-label" style="margin-bottom:12px;">
+                <input type="checkbox" id="rm-customer-tiles" onchange="rmCalc()">
+                Customer supplies tiles (no tile cost)
+            </label>
+            <div class="field-group" style="margin-bottom:0;">
+                <label>Labour Pricing</label>
+                <div class="labour-toggle">
+                    <button id="ltbtn-m2"  onclick="setLabourType('m2')"  class="ltbtn ltbtn-active">£/m²</button>
+                    <button id="ltbtn-day" onclick="setLabourType('day')" class="ltbtn">Day Rate</button>
+                </div>
+            </div>
+            <div id="labour-day-opts" class="hidden" style="margin-top:10px;">
+                <div class="field-row" style="margin-bottom:0;">
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Days</label>
+                        <input id="rm-days" type="number" step="0.5" min="0.5" placeholder="e.g. 2" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label>Day Rate (£)</label>
+                        <input id="rm-dayrate" type="number" step="10" oninput="rmCalc()">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section-label" style="margin-bottom:10px;">What are you tiling?</div>
+        <div class="stype-row">
+            <button id="stype-btn-room"  onclick="rmSelectType('room')"  class="stype-btn stype-room">🏠<br><span>Full Room</span></button>
+            <button id="stype-btn-floor" onclick="rmSelectType('floor')" class="stype-btn">⬜<br><span>Floor only</span></button>
+            <button id="stype-btn-wall"  onclick="rmSelectType('wall')"  class="stype-btn">🧱<br><span>Wall only</span></button>
+        </div>
+
+
+        <!-- FULL ROOM -->
+        <div id="rm-form-room" class="measure-form">
+            <div class="form-section-label">Room Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Length (m)</label>
+                    <input id="rm-r-length" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-r-width" type="number" step="0.01" placeholder="e.g. 2.2" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Wall Height (m)</label>
+                <input id="rm-r-height" type="number" step="0.01" placeholder="e.g. 2.4" oninput="rmCalc()">
+            </div>
+
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('sealant')" id="collapse-toggle-sealant">
+                Sealant (silicone) <span class="deduct-toggle-arrow" id="collapse-arrow-sealant">▸</span>
+            </div>
+            <div id="collapse-panel-sealant" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Include sealant</label>
+                    <select id="rm-sealant-enabled" onchange="rmCalc()">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label>Sealant for floor perimeter</label>
+                    <input id="rm-sealant-floorperim" type="checkbox" checked onchange="rmCalc()">
+                    <div class="small-note" style="margin-top:4px;">Adds 2×(L+W) once per room.</div>
+                </div>
+
+                <div class="field-group">
+                    <label>External corners</label>
+                    <input id="rm-sealant-corners" type="number" step="1" min="0" placeholder="e.g. 2" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="small-note" style="margin-top:-6px;">
+                Uses (optional) floor perimeter + (external corners × room height). Floor perimeter is counted once per room.
+            </div>
+            </div>
+
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('extrawork')" id="collapse-toggle-extrawork">
+                Extra Work <span class="deduct-toggle-arrow" id="collapse-arrow-extrawork">▸</span>
+            </div>
+            <div id="collapse-panel-extrawork" class="hidden">
+            <div class="field-row">
+                <div class="field-group" style="flex:2;">
+                    <label>Description</label>
+                    <input id="rm-extra-desc" type="text" placeholder="e.g. Remove & refit toilet" oninput="rmCalc()">
+                </div>
+                <div class="field-group" style="flex:1;">
+                    <label>Cost (£)</label>
+                    <input id="rm-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
+                </div>
+            </div>
+            </div>
+
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim')" id="collapse-toggle-trim">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim">▸</span>
+                <span id="trim-r-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('r')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£) <span class="pc-trim" style="color:var(--muted);font-weight:400;"></span></label>
+                    <input id="rm-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('r')">
+                </div>
+            </div>
+            <div class="small-note">Trim at <span class="pc-trim-len">2.5</span>m per length. Override price here or set default in Settings.</div>
+            </div>
+
+            <div class="divider-label deduct-toggle" onclick="toggleDeductPanel('r')" id="deduct-toggle-r">
+                Deductions <span class="deduct-toggle-arrow">▸</span>
+                <span id="deduct-total-badge" style="background:#c00;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:6px;display:none;"></span>
+            </div>
+            <div id="deduct-panel-r" class="hidden">
+            <div id="deduct-wall-chips" class="deduct-chips">
+                <label class="deduct-chip"><input type="checkbox" value="door"     onchange="toggleDeductChip(this)">🚪 Door<br><small>1.9×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathwall" onchange="toggleDeductChip(this)">🛁 Bath Wall<br><small>1.7×0.6m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend1" onchange="toggleDeductChip(this)">🛁 Bath End<br><small>0.7×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend2" onchange="toggleDeductChip(this)">🛁 Bath End 2<br><small>0.7×0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathfloor" onchange="toggleDeductChip(this)">🛁 Bath Floor<br><small>1.7×0.7m</small></label>
+                <label class="deduct-chip deduct-chip-manual" onclick="addManualDeduct(event)">✏ Custom<br><small>enter size</small></label>
+            </div>
+            <div id="deduct-manual-items" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+            <div id="deduct-total-line" style="display:none;font-size:12px;color:#c00;font-weight:600;margin-bottom:8px;"></div>
+            </div>
+            <input id="rm-r-deduct" type="hidden" value="0">
+            <input id="rm-r-fdeduct" type="hidden" value="0">
+
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('walltiles')" id="collapse-toggle-walltiles">
+                Wall Tiles <span class="deduct-toggle-arrow" id="collapse-arrow-walltiles">▸</span>
+                <span id="walltiles-badge" style="font-size:10px;font-weight:600;color:var(--muted);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-walltiles" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-r-wtilew" type="number" value="300" oninput="rmCalc();updateWallTilesBadge()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-r-wtileh" type="number" value="600" oninput="rmCalc();updateWallTilesBadge()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-r-wtilethick" type="number" value="8" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Wall Grout Joint (mm)</label>
+                <input id="rm-r-wgrout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            </div>
+            <div class="divider-label">Floor</div>
+            <label class="checkbox-label" style="margin-bottom:10px;">
+                <input type="checkbox" id="rm-r-inclfloor" checked onchange="rmToggleFloor()">
+                Include floor
+            </label>
+            <div id="rm-r-floor-opts">
+                <div class="field-row">
+                    <div class="field-group">
+                        <label>Floor Tile W (mm)</label>
+                        <input id="rm-r-ftilew" type="number" value="600" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group">
+                        <label>Floor Tile H (mm)</label>
+                        <input id="rm-r-ftileh" type="number" value="600" oninput="rmCalc()">
+                    </div>
+                    <div class="field-group">
+                        <label>Tile Thickness (mm)</label>
+                        <input id="rm-r-ftilethick" type="number" value="10" oninput="rmCalc()">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label>Floor Grout Joint (mm)</label>
+                    <input id="rm-r-fgrout" type="number" value="2" oninput="rmCalc()">
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="rm-r-ufh" onchange="rmCalc()">
+                    Underfloor Heating (UFH)
+                </label>
+                <div class="divider-label">Floor Preparation</div>
+                <div class="prep-options">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-cementboard" onchange="rmCalc()">
+                        <div class="prep-text"><span>Cement Board</span><span class="prep-cost">+£<span class="pc-cb"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-membrane" onchange="rmCalc()">
+                        <div class="prep-text"><span>Anti-Crack Membrane</span><span class="prep-cost">+£<span class="pc-mem"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-levelling" onchange="rmToggleLevelR()">
+                        <div class="prep-text"><span>Levelling Compound</span><span class="prep-cost">+£<span class="pc-lev-r"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-level-depth" class="prep-depth hidden">
+                        <label>Depth</label>
+                        <select id="rm-r-leveldepth" onchange="rmCalc()">
+                            <option value="2">2 mm</option>
+                            <option value="3">3 mm</option>
+                            <option value="4">4 mm</option>
+                        </select>
+                    </div>
+                    <div id="rm-r-clips-row" class="hidden">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-clips" onchange="rmCalc()">
+                        <div class="prep-text"><span>Levelling Clips &amp; Wedges</span><span class="prep-cost">+£<span class="pc-clips"></span>/200 clips</span></div>
+                    </label>
+                    </div>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-tanking" onchange="rmCalc()">
+                        <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-r"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-primer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-stone" onchange="rmToggleStoneR()">
+                        <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-sealer-row" class="hidden">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-sealer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                    </label>
+                    </div>
+                </div>
+                <div class="divider-label">Wall Preparation</div>
+                <div class="prep-options">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wprimer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wstone" onchange="rmToggleWStoneR()">
+                        <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-wsealer-row" class="hidden">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wsealer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                    </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLOOR ONLY -->
+        <div id="rm-form-floor" class="measure-form hidden">
+            <div class="form-section-label">Floor Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Length (m)</label>
+                    <input id="rm-f-length" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-f-width" type="number" step="0.01" placeholder="e.g. 2.2" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="divider-label deduct-toggle" onclick="toggleDeductPanel('f')" id="deduct-toggle-f">
+                Deductions <span class="deduct-toggle-arrow">▸</span>
+            </div>
+            <div id="deduct-panel-f" class="hidden">
+            <div class="deduct-chips">
+                <label class="deduct-chip"><input type="checkbox" value="bathfloor" onchange="updateDeductTotals()">🛁 Bath Floor<br><small>1.7x0.7m</small></label>
+                <label class="deduct-chip deduct-chip-manual" onclick="addManualDeduct(event)">✏ Custom<br><small>enter size</small></label>
+            </div>
+            <div id="deduct-f-manual" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+            <div id="deduct-f-total" style="display:none;font-size:12px;color:#c00;font-weight:600;margin-bottom:8px;"></div>
+            </div>
+            <input id="rm-f-deduct" type="hidden" value="0">
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('extrawork-f')" id="collapse-toggle-extrawork-f">
+                Extra Work <span class="deduct-toggle-arrow" id="collapse-arrow-extrawork-f">▸</span>
+            </div>
+            <div id="collapse-panel-extrawork-f" class="hidden">
+            <div class="field-row">
+                <div class="field-group" style="flex:2;">
+                    <label>Description</label>
+                    <input id="rm-f-extra-desc" type="text" placeholder="e.g. Remove & refit toilet" oninput="rmCalc()">
+                </div>
+                <div class="field-group" style="flex:1;">
+                    <label>Cost (£)</label>
+                    <input id="rm-f-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim-f')" id="collapse-toggle-trim-f">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim-f">▸</span>
+                <span id="trim-f-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim-f" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-f-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('f')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£)</label>
+                    <input id="rm-f-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('f')">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label">Tile</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-f-tilew" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-f-tileh" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-f-tilethick" type="number" value="10" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Grout Joint (mm)</label>
+                <input id="rm-f-grout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            <label class="checkbox-label" style="margin-bottom:4px;">
+                <input type="checkbox" id="rm-f-ufh" onchange="rmCalc()">
+                Underfloor Heating (UFH)
+            </label>
+            <div class="divider-label">Floor Preparation</div>
+            <div class="prep-options">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-cementboard" onchange="rmCalc()">
+                    <div class="prep-text"><span>Cement Board</span><span class="prep-cost">+£<span class="pc-cb"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-membrane" onchange="rmCalc()">
+                    <div class="prep-text"><span>Anti-Crack Membrane</span><span class="prep-cost">+£<span class="pc-mem"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-levelling" onchange="rmToggleLevelF()">
+                    <div class="prep-text"><span>Levelling Compound</span><span class="prep-cost">+£<span class="pc-lev-f"></span>/m²</span></div>
+                </label>
+                <div id="rm-f-level-depth" class="prep-depth hidden">
+                    <label>Depth</label>
+                    <select id="rm-f-leveldepth" onchange="rmCalc()">
+                        <option value="2">2 mm</option>
+                        <option value="3">3 mm</option>
+                        <option value="4">4 mm</option>
+                    </select>
+                </div>
+                <div id="rm-f-clips-row" class="hidden">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-clips" onchange="rmCalc()">
+                    <div class="prep-text"><span>Levelling Clips &amp; Wedges</span><span class="prep-cost">+£<span class="pc-clips"></span>/200 clips</span></div>
+                </label>
+                </div>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-tanking" onchange="rmCalc()">
+                    <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-f"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-primer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-stone" onchange="rmToggleStoneF()">
+                    <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                </label>
+                <div id="rm-f-sealer-row" class="hidden">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-sealer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                </label>
+                </div>
+            </div>
+            <!-- Extra floors -->
+            <div id="extra-floors-list"></div>
+            <button type="button" class="btn-add-surface" onclick="addExtraSurface('floor')">+ Add Another Floor Area</button>
+        </div>
+
+        <!-- WALL ONLY -->
+        <div id="rm-form-wall" class="measure-form hidden">
+            <div class="form-section-label">Wall Measurements</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Width (m)</label>
+                    <input id="rm-w-width" type="number" step="0.01" placeholder="e.g. 3.5" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Height (m)</label>
+                    <input id="rm-w-height" type="number" step="0.01" placeholder="e.g. 2.4" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="divider-label deduct-toggle" onclick="toggleDeductPanel('w')" id="deduct-toggle-w">
+                Deductions <span class="deduct-toggle-arrow">▸</span>
+            </div>
+            <div id="deduct-panel-w" class="hidden">
+            <div class="deduct-chips">
+                <label class="deduct-chip"><input type="checkbox" value="door"     onchange="updateDeductTotals()">🚪 Door<br><small>1.9x0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathwall" onchange="updateDeductTotals()">🛁 Bath Wall<br><small>1.7x0.6m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend1" onchange="updateDeductTotals()">🛁 Bath End<br><small>0.7x0.7m</small></label>
+                <label class="deduct-chip"><input type="checkbox" value="bathend2" onchange="updateDeductTotals()">🛁 Bath End 2<br><small>0.7x0.7m</small></label>
+                <label class="deduct-chip deduct-chip-manual" onclick="addManualDeduct(event)">✏ Custom<br><small>enter size</small></label>
+            </div>
+            <div id="deduct-w-manual" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+            </div>
+            <input id="rm-w-deduct" type="hidden" value="0">
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('extrawork-w')" id="collapse-toggle-extrawork-w">
+                Extra Work <span class="deduct-toggle-arrow" id="collapse-arrow-extrawork-w">▸</span>
+            </div>
+            <div id="collapse-panel-extrawork-w" class="hidden">
+            <div class="field-row">
+                <div class="field-group" style="flex:2;">
+                    <label>Description</label>
+                    <input id="rm-w-extra-desc" type="text" placeholder="e.g. Remove & refit radiator" oninput="rmCalc()">
+                </div>
+                <div class="field-group" style="flex:1;">
+                    <label>Cost (£)</label>
+                    <input id="rm-w-extra-cost" type="number" step="0.01" placeholder="0" oninput="rmCalc()">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label deduct-toggle" onclick="toggleCollapse('trim-w')" id="collapse-toggle-trim-w">
+                Tile Trim <span class="deduct-toggle-arrow" id="collapse-arrow-trim-w">▸</span>
+                <span id="trim-w-badge" style="font-size:10px;font-weight:600;color:var(--amber);margin-left:6px;"></span>
+            </div>
+            <div id="collapse-panel-trim-w" class="hidden">
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Lengths (× 2.5m)</label>
+                    <input id="rm-w-trim-lengths" type="number" step="1" min="0" placeholder="0" oninput="rmCalc();updateTrimBadge('w')">
+                </div>
+                <div class="field-group">
+                    <label>Price per length (£)</label>
+                    <input id="rm-w-trim-price" type="number" step="0.01" placeholder="Uses settings default" oninput="rmCalc();updateTrimBadge('w')">
+                </div>
+            </div>
+            </div>
+            <div class="divider-label">Tile</div>
+            <div class="field-row">
+                <div class="field-group">
+                    <label>Tile W (mm)</label>
+                    <input id="rm-w-tilew" type="number" value="300" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile H (mm)</label>
+                    <input id="rm-w-tileh" type="number" value="600" oninput="rmCalc()">
+                </div>
+                <div class="field-group">
+                    <label>Tile Thickness (mm)</label>
+                    <input id="rm-w-tilethick" type="number" value="8" oninput="rmCalc()">
+                </div>
+            </div>
+            <div class="field-group">
+                <label>Grout Joint (mm)</label>
+                <input id="rm-w-grout" type="number" value="2" oninput="rmCalc()">
+            </div>
+            <div class="divider-label">Wall Preparation</div>
+            <div class="prep-options">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-tanking" onchange="rmCalc()">
+                    <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-w"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-primer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-stone" onchange="rmToggleStoneW()">
+                    <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                </label>
+                <div id="rm-w-sealer-row" class="hidden">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-sealer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                </label>
+                </div>
+            </div>
+            <!-- Extra walls -->
+            <div id="extra-walls-list"></div>
+            <button type="button" class="btn-add-surface" onclick="addExtraSurface('wall')">+ Add Another Wall</button>
+        </div>
+
+        <div class="live-total-card">
+            <div class="live-total-label">Estimated Room Total <span id="rm-area" class="live-total-m2"></span></div>
+            <div class="live-total-value">£<span id="rm-total">0.00</span></div>
+            <div id="rm-breakdown" class="total-breakdown"></div>
+        </div>
+
+        <div class="form-actions" style="margin-top:14px;">
+            <button onclick="goJob()" class="btn-secondary">Cancel</button>
+            <button onclick="saveRoom()" class="btn-primary">Save Room</button>
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goDashboard()" class="btn-back">← Back</button>
+        <h2 class="header-title">Settings</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card">
+            <div class="form-section-label">Material Costs</div>
+            <div class="field-row">
+                <div class="field-group"><label>Tile Price (£/m²)</label><input id="set-tile-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Grout 2.5kg bag (£)</label><input id="set-grout-price-25" type="number" step="0.01"></div>
+                <div class="field-group"><label>Grout 5kg bag (£)</label><input id="set-grout-price-5" type="number" step="0.01"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Grout bag size used</label>
+                    <select id="set-grout-bag-size">
+                        <option value="2.5">2.5 kg</option>
+                        <option value="5">5 kg</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Adhesive (per bag) £</label><input id="set-adhesive-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Rapid Set Adhesive (per bag) £</label><input id="set-rapid-adh-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Silicone (per tube) £</label><input id="set-silicone-price" type="number" step="0.01"></div>
+                <div class="field-group"><label>Silicone coverage (m per tube)</label><input id="set-silicone-coverage" type="number" step="0.1"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Pricing</div>
+            <div class="field-row">
+                <div class="field-group"><label>Material Markup (%)</label><input id="set-markup" type="number"></div>
+                <div class="field-group"><label>Markup Labour too?</label>
+                    <select id="set-labour-markup"><option value="false">No</option><option value="true">Yes</option></select>
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Labour Rate (£/m²)</label><input id="set-labour-m2" type="number" step="0.5"></div>
+                <div class="field-group"><label>Day Rate (£/day)</label><input id="set-day-rate" type="number"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>UFH Rate (£/m²)</label><input id="set-ufh-m2" type="number" step="0.5"></div>
+                <div class="field-group"><label>UFH Fixed Cost (£)</label><input id="set-ufh-fixed" type="number" step="1"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Preparation Costs</div>
+            <div class="form-section-label" style="font-size:10px;margin-bottom:6px;border:none;padding:0;">Cement Board</div>
+            <div class="field-row">
+                <div class="field-group"><label>Material (£/m²)</label><input id="set-cementboard" type="number" step="0.50"></div>
+                <div class="field-group"><label>Fitting Labour (£/m²)</label><input id="set-cb-labour" type="number" step="0.50"></div>
+                <div class="field-group"><label>Bonding Adhesive (kg/m²)</label><input id="set-cb-adh" type="number" step="0.5"></div>
+            </div>
+            <div class="form-section-label" style="font-size:10px;margin-bottom:6px;border:none;padding:0;">Anti-Crack Membrane</div>
+            <div class="field-row">
+                <div class="field-group"><label>Material (£/m²)</label><input id="set-membrane" type="number" step="0.50"></div>
+                <div class="field-group"><label>Fitting Labour (£/m²)</label><input id="set-mem-labour" type="number" step="0.50"></div>
+                <div class="field-group"><label>Bedding Adhesive (kg/m²)</label><input id="set-mem-adh" type="number" step="0.5"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Levelling 2mm (£/m²)</label><input id="set-level2" type="number" step="0.50"></div>
+                <div class="field-group"><label>Levelling 3mm (£/m²)</label><input id="set-level3" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Levelling 4mm (£/m²)</label><input id="set-level4" type="number" step="0.50"></div>
+                <div class="field-group"><label>Tanking (£/m²)</label><input id="set-tanking" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Clips (£ per 200)</label><input id="set-clip-price" type="number" step="0.50"></div>
+                <div class="field-group"><label>Wedges (£ per 200)</label><input id="set-wedge-price" type="number" step="0.50"></div>
+                <div class="field-group"><label>Tile Trim (£ per 2.5m length)</label><input id="set-trim-price" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Primer (£/m²)</label><input id="set-primer-price" type="number" step="0.50"></div>
+                <div class="field-group"><label>Natural Stone Install (£/m²)</label><input id="set-stone-surcharge" type="number" step="0.50"></div>
+                <div class="field-group"><label>Stone Sealer (£/m²)</label><input id="set-sealer-price" type="number" step="0.50"></div>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">VAT</div>
+            <div class="field-group"><label>Apply VAT by default?</label>
+                <select id="set-vat"><option value="true">Yes – 20%</option><option value="false">No</option></select>
+            </div>
+            <div class="form-section-label" style="margin-top:18px;">Your Company</div>
+            <div class="field-group"><label>Company Name</label><input id="set-company-name" placeholder="Your Tiling Co."></div>
+            <div class="field-row">
+                <div class="field-group"><label>Phone</label><input id="set-company-phone"></div>
+                <div class="field-group"><label>Email</label><input id="set-company-email"></div>
+            </div>
+            <div class="field-group"><label>Quote Terms</label>
+                <textarea id="set-terms" rows="3" placeholder="e.g. Payment due within 14 days…"></textarea>
+            </div>
+            <div class="form-actions">
+                <button onclick="goDashboard()" class="btn-secondary">Cancel</button>
+                <button onclick="saveSettings()" class="btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QUOTE -->
+<div id="screen-quote" class="screen hidden">
+    <header class="app-header">
+        <button onclick="goJob()" class="btn-back">← Back</button>
+        <h2 class="header-title">Quote</h2>
+        <div></div>
+    </header>
+    <div class="page-body">
+        <div class="form-card" style="margin-bottom:14px;">
+            <div class="field-row">
+                <div class="field-group"><label>Apply VAT?</label>
+                    <select id="q-vat" onchange="renderQuote()"><option value="true">Yes – 20%</option><option value="false">No</option></select>
+                </div>
+                <div class="field-group"><label>Valid for (days)</label>
+                    <input id="q-expiry" type="number" value="30" onchange="renderQuote()">
+                </div>
+            </div>
+        </div>
+        <div id="quote-output" class="quote-preview-box"></div>
+        <div class="ai-section">
+            <div class="form-section-label">AI Description</div>
+            <div class="field-row">
+                <div class="field-group"><label>Style</label>
+                    <select id="ai-style">
+                        <option value="professional">Professional</option>
+                        <option value="labour">Labour Focused</option>
+                        <option value="materials">Materials</option>
+                        <option value="fixing">Fixing Method</option>
+                        <option value="subfloor">Subfloor Prep</option>
+                        <option value="sales">Customer Friendly</option>
+                    </select>
+                </div>
+                <div class="field-group" style="display:flex;align-items:flex-end;">
+                    <button onclick="generateAI()" class="btn-primary" style="width:100%">✨ Generate</button>
+                </div>
+            </div>
+            <div id="ai-box"></div>
+        </div>
+        <div class="action-row">
+            <button onclick="exportCSV()" class="btn-secondary">📊 CSV</button>
+            <button onclick="downloadPDF()" class="btn-primary">📄 PDF</button>
+        </div>
+        <button onclick="exportFreeAgent()" class="btn-secondary" style="width:100%;margin-top:8px;">🔗 FreeAgent Export</button>
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js" defer></script>
+</body>
+</html>
