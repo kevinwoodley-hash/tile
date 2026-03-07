@@ -136,7 +136,24 @@ function toggleTheme() {
 /* ─── SUPABASE ───────────────────────────────────────────────── */
 const SB_URL = "https://lzwmqabxpxuuznhbpewm.supabase.co";
 const SB_KEY = "sb_publishable_bbLOe7wwtEWJhRxXZEKuuQ_QANTrsyr";
-const sb = supabase.createClient(SB_URL, SB_KEY);
+const sb = supabase.createClient(SB_URL, SB_KEY, {
+    auth: {
+        // On mobile (Capacitor) use the custom scheme for redirects
+        redirectTo: (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform?.())
+            ? "com.tileiq.pro://"
+            : window.location.origin + window.location.pathname,
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true
+    }
+});
+
+// Handle auth redirect on app resume (mobile deep link)
+if (typeof Capacitor !== "undefined") {
+    document.addEventListener("deviceready", () => {
+        sb.auth.getSession(); // re-check session after deep link return
+    });
+}
 
 let currentUser = null;
 
