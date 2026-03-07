@@ -12,6 +12,7 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     groutPrice5:   7.50,  // £ per 5kg bag
     groutBagSize:  2.5,   // kg per bag (2.5 or 5)
     adhesivePrice: 22,
+    rapidAdhPrice: 28,   // £ per 20kg bag of rapid set adhesive (used for anti-crack membrane)
     siliconePrice: 6.50,
     siliconeCoverage: 6,
     markup:        20,
@@ -1083,7 +1084,8 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
     // Prep costs — all rates are £/m², multiplied by surface area
     s.prepCost = 0;
     s.prepLines = [];
-    s.prepAdhKg = 0;   // extra adhesive kg from prep (cement board / membrane bonding)
+    s.prepAdhKg  = 0;   // extra standard adhesive kg from prep (cement board bonding)
+    s.rapidAdhKg = 0;   // rapid set adhesive kg for anti-crack membrane bed
     if (s.type === "floor") {
         if (s.cementBoard) {
             const matRate  = parseFloat(S.cementBoard) || 18;
@@ -1099,15 +1101,18 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
             s.prepLines.push(`Cement Board: ${boards} board${boards !== 1 ? "s" : ""} · material £${matCost.toFixed(2)} · fitting labour £${labCost.toFixed(2)} · +${adhKg.toFixed(1)}kg adhesive`);
         }
         if (s.membrane) {
-            const matRate = parseFloat(S.membrane)    || 8;
-            const labRate = parseFloat(S.memLabour)   || 3;
-            const adhRate = parseFloat(S.memAdhKgM2)  || 3;
-            const matCost = s.area * matRate;
-            const labCost = s.area * labRate;
-            const adhKg   = s.area * adhRate;
-            s.prepAdhKg  += adhKg;
-            s.prepCost   += matCost + labCost;
-            s.prepLines.push(`Anti-Crack Membrane: material £${matCost.toFixed(2)} · fitting labour £${labCost.toFixed(2)} · +${adhKg.toFixed(1)}kg adhesive`);
+            const matRate     = parseFloat(S.membrane)      || 8;
+            const labRate     = parseFloat(S.memLabour)     || 3;
+            const adhRate     = parseFloat(S.memAdhKgM2)    || 3;
+            const rapidPrice  = parseFloat(S.rapidAdhPrice) || 28;
+            const matCost     = s.area * matRate;
+            const labCost     = s.area * labRate;
+            const adhKg       = s.area * adhRate;
+            const rapidBags   = Math.ceil(adhKg / 20);
+            const rapidCost   = rapidBags * rapidPrice * (1 + (parseFloat(S.markup) || 0) / 100);
+            s.rapidAdhKg     += adhKg;
+            s.prepCost       += matCost + labCost + rapidCost;
+            s.prepLines.push(`Anti-Crack Membrane: material £${matCost.toFixed(2)} · fitting labour £${labCost.toFixed(2)} · rapid set adhesive ${rapidBags} bag${rapidBags!==1?"s":""} (${adhKg.toFixed(1)}kg) £${rapidCost.toFixed(2)}`);
         }
         if (s.levelling) {
             const depth  = s.levelDepth || 2;
@@ -1140,11 +1145,14 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
 
     s.total = (s.materialSell + s.labour + s.ufhCost + s.prepCost).toFixed(2);
 
-    // Fold prep adhesive (cement board bond + membrane bed) into the surface adhKg total
-    // so job-level bag counts are correct.
+    // Fold standard prep adhesive (cement board bond) into the surface adhKg total
     if (s.prepAdhKg > 0) {
-        s.adhKg += s.prepAdhKg;
-        s.adhBags = Math.ceil(s.adhKg / 20);
+        s.adhKg   += s.prepAdhKg;
+        s.adhBags  = Math.ceil(s.adhKg / 20);
+    }
+    // Rapid set adhesive bags (membrane) tracked separately — cost already in prepCost
+    if (s.rapidAdhKg > 0) {
+        s.rapidAdhBags = Math.ceil(s.rapidAdhKg / 20);
     }
 }
 
@@ -1430,6 +1438,8 @@ function rmCalc() {
     // Aggregate bag/board quantities across all surfaces
     const totalAdhKg      = surfaces.reduce((a, s) => a + (s.adhKg       || 0), 0);
     const totalAdhBags    = Math.ceil(totalAdhKg / 20);
+    const totalRapidKg    = surfaces.reduce((a, s) => a + (s.rapidAdhKg  || 0), 0);
+    const totalRapidBags  = Math.ceil(totalRapidKg / 20);
     const totalGroutKg    = surfaces.reduce((a, s) => a + (s.groutKg     || 0), 0);
     const totalGroutBags  = Math.ceil(totalGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
     const totalCBBoards   = surfaces.reduce((a, s) => a + (s.cementBoards|| 0), 0);
@@ -1448,6 +1458,7 @@ function rmCalc() {
     }
     if (ufh  > 0) parts.push(`UFH £${ufh.toFixed(2)}`);
     if (totalAdhBags   > 0) parts.push(`Adhesive: ${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""}`);
+    if (totalRapidBags > 0) parts.push(`Rapid Set: ${totalRapidBags} × 20kg bag${totalRapidBags !== 1 ? "s" : ""}`);
     if (totalGroutBags > 0) parts.push(`Grout: ${totalGroutBags} × ${(parseFloat(settings.groutBagSize)||2.5)}kg bag${totalGroutBags !== 1 ? "s" : ""}`);
     if (totalCBBoards  > 0) parts.push(`Cement Board: ${totalCBBoards} board${totalCBBoards !== 1 ? "s" : ""}`);
     if (totalLevelBags > 0) parts.push(`Levelling: ${totalLevelBags} × 20kg bag${totalLevelBags !== 1 ? "s" : ""}`);
@@ -1563,6 +1574,7 @@ function goSettings() {
     document.getElementById("set-grout-price-5").value   = s.groutPrice5  || 7.50;
     document.getElementById("set-grout-bag-size").value  = s.groutBagSize || 2.5;
     document.getElementById("set-adhesive-price").value = s.adhesivePrice;
+    document.getElementById("set-rapid-adh-price").value = s.rapidAdhPrice || 28;
     document.getElementById("set-silicone-price").value = s.siliconePrice || 6.50;
     document.getElementById("set-silicone-coverage").value = s.siliconeCoverage || 6;
     document.getElementById("set-markup").value         = s.markup;
@@ -1599,6 +1611,7 @@ function saveSettings() {
         groutPrice5:   parseFloat(document.getElementById("set-grout-price-5").value)   || 7.50,
         groutBagSize:  parseFloat(document.getElementById("set-grout-bag-size").value)  || 2.5,
         adhesivePrice: parseFloat(document.getElementById("set-adhesive-price").value) || 22,
+        rapidAdhPrice: parseFloat(document.getElementById("set-rapid-adh-price").value) || 28,
         siliconePrice: parseFloat(document.getElementById("set-silicone-price").value) || 6.50,
         siliconeCoverage: parseFloat(document.getElementById("set-silicone-coverage").value) || 6,
         markup:        parseFloat(document.getElementById("set-markup").value)         || 20,
@@ -1665,7 +1678,7 @@ function renderMaterials() {
     }
 
     // Recalculate all surfaces fresh
-    let grandTiles = 0, grandAdhKg = 0;
+    let grandTiles = 0, grandAdhKg = 0, grandRapidAdhKg = 0;
     let grandWallGroutKg = 0;
     let grandFloorGroutKg = 0;
     let grandCBBoards = 0, grandLevelBags = 0;
@@ -1693,6 +1706,7 @@ function renderMaterials() {
             const adhKg     = (s.adhKg || 0).toFixed(0);
             grandTiles     += s.tiles     || 0;
             grandAdhKg     += (s.adhKg || 0);
+            grandRapidAdhKg += (s.rapidAdhKg || 0);
             if (s.type === "wall") {
                 grandWallGroutKg   += s.groutKg   || 0;
             } else {
@@ -1754,6 +1768,7 @@ function renderMaterials() {
 
     // Round bags ONCE at job level (prevents 5 small surfaces becoming 5 bags)
     const grandAdhBags        = Math.ceil(grandAdhKg / 20);
+    const grandRapidAdhBags   = Math.ceil(grandRapidAdhKg / 20);
     const grandWallGroutBags  = Math.ceil(grandWallGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
     const grandFloorGroutBags = Math.ceil(grandFloorGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
 
@@ -1763,6 +1778,7 @@ function renderMaterials() {
         <div class="mat-totals-grid">
             <div class="mat-total-item"><span class="mat-total-label">Tiles</span><span class="mat-total-value">${grandTiles}</span></div>
             <div class="mat-total-item"><span class="mat-total-label">Adhesive</span><span class="mat-total-value">${grandAdhBags} × 20kg<br><span style="font-size:11px;font-weight:400;">${grandAdhKg.toFixed(0)}kg total</span></span></div>
+            ${grandRapidAdhBags > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Rapid Set Adhesive</span><span class="mat-total-value">${grandRapidAdhBags} × 20kg<br><span style="font-size:11px;font-weight:400;">${grandRapidAdhKg.toFixed(0)}kg total</span></span></div>` : ""}
             <div class="mat-total-item"><span class="mat-total-label">Grout</span><span class="mat-total-value">Wall: ${grandWallGroutBags} × ${(parseFloat(settings.groutBagSize)||2.5)}kg<br>Floor: ${grandFloorGroutBags} × ${(parseFloat(settings.groutBagSize)||2.5)}kg<br><span style="font-size:11px;font-weight:600;">Total: ${grandWallGroutBags + grandFloorGroutBags} bag${(grandWallGroutBags + grandFloorGroutBags)!==1?"s":""}</span></span></div>
             ${grandSiliconeTubes > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Sealant</span><span class="mat-total-value">${grandSiliconeTubes} tube${grandSiliconeTubes!==1?"s":""}<br><span style="font-size:11px;font-weight:400;">${grandSiliconeMetres.toFixed(1)}m total</span><br><span style="font-size:11px;font-weight:400;">Floor perimeter bead: ${grandSiliconeFloor.toFixed(1)}m</span></span></div>` : ""}
             ${grandCBBoards  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Cement Board</span><span class="mat-total-value">${grandCBBoards} board${grandCBBoards!==1?"s":""}</span></div>` : ""}
@@ -1792,6 +1808,7 @@ function renderQuote() {
 
     let totalMats = 0, totalLabour = 0, totalPrep = 0, totalExtras = 0;
     let totalAdhKg = 0,
+        totalRapidAdhKg = 0,
         totalWallGroutKg = 0,
         totalFloorGroutKg = 0,
         totalCBBoards = 0, totalLevelBags = 0,
@@ -1820,6 +1837,7 @@ function renderQuote() {
         totalPrep      += surfaces.reduce((a, s) => a + (s.prepCost || 0), 0);
         totalExtras    += parseFloat(room.extraWorkCost || 0);
         totalAdhKg        += surfaces.reduce((a, s) => a + (s.adhKg || 0), 0);
+        totalRapidAdhKg   += surfaces.reduce((a, s) => a + (s.rapidAdhKg || 0), 0);
         // Split grout totals wall vs floor (kg sums; bags rounded once below)
         totalWallGroutKg   += surfaces.filter(s=>s.type==='wall').reduce((a,s)=>a+(s.groutKg||0),0);
         totalFloorGroutKg  += surfaces.filter(s=>s.type==='floor').reduce((a,s)=>a+(s.groutKg||0),0);
@@ -1944,6 +1962,7 @@ const roomTotal = parseFloat(room.total || 0);
     const multJob = 1 + (parseFloat(settings.markup) || 0) / 100;
 
     const totalAdhBags        = Math.ceil(totalAdhKg / 20);
+    const totalRapidAdhBags   = Math.ceil(totalRapidAdhKg / 20);
     const totalWallGroutBags  = Math.ceil(totalWallGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
     const totalFloorGroutBags = Math.ceil(totalFloorGroutKg / (parseFloat(settings.groutBagSize) || 2.5));
 
@@ -1956,6 +1975,10 @@ const roomTotal = parseFloat(room.total || 0);
 
     const jobScheduleLines = [];
     if (totalAdhBags   > 0) jobScheduleLines.push(`<div class="qms-row"><span>Tile Adhesive (whole job)</span><span>${totalAdhBags} × 20kg bag${totalAdhBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobAdhSell.toFixed(2)}</span></span></div>`);
+    if (totalRapidAdhBags > 0) {
+        const jobRapidSell = totalRapidAdhBags * (parseFloat(settings.rapidAdhPrice) || 28) * multJob;
+        jobScheduleLines.push(`<div class="qms-row"><span>Rapid Set Adhesive (whole job)</span><span>${totalRapidAdhBags} × 20kg bag${totalRapidAdhBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobRapidSell.toFixed(2)}</span></span></div>`);
+    }
         if (totalWallGroutBags > 0) jobScheduleLines.push(`<div class="qms-row"><span>Wall Grout (whole job)</span><span>${totalWallGroutBags} × ${(parseFloat(settings.groutBagSize)||2.5)}kg bag${totalWallGroutBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobWallGroutSell.toFixed(2)}</span></span></div>`);
     if (totalFloorGroutBags > 0) jobScheduleLines.push(`<div class="qms-row"><span>Floor Grout (whole job)</span><span>${totalFloorGroutBags} × ${(parseFloat(settings.groutBagSize)||2.5)}kg bag${totalFloorGroutBags !== 1 ? "s" : ""} <span style="color:#6b7280">· £${jobFloorGroutSell.toFixed(2)}</span></span></div>`);
     
