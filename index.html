@@ -473,6 +473,37 @@
                         <input type="checkbox" id="rm-r-tanking" onchange="rmCalc()">
                         <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-r"></span>/m²</span></div>
                     </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-primer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-stone" onchange="rmToggleStoneR()">
+                        <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-sealer-row" class="hidden">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-sealer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                    </label>
+                    </div>
+                </div>
+                <div class="divider-label">Wall Preparation</div>
+                <div class="prep-options">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wprimer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                    </label>
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wstone" onchange="rmToggleWStoneR()">
+                        <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                    </label>
+                    <div id="rm-r-wsealer-row" class="hidden">
+                    <label class="prep-option">
+                        <input type="checkbox" id="rm-r-wsealer" onchange="rmCalc()">
+                        <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                    </label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -588,6 +619,20 @@
                     <input type="checkbox" id="rm-f-tanking" onchange="rmCalc()">
                     <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-f"></span>/m²</span></div>
                 </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-primer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-stone" onchange="rmToggleStoneF()">
+                    <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                </label>
+                <div id="rm-f-sealer-row" class="hidden">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-f-sealer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                </label>
+                </div>
             </div>
             <!-- Extra floors -->
             <div id="extra-floors-list"></div>
@@ -677,6 +722,20 @@
                     <input type="checkbox" id="rm-w-tanking" onchange="rmCalc()">
                     <div class="prep-text"><span>Tanking (Waterproofing)</span><span class="prep-cost">+£<span class="pc-tank-w"></span>/m²</span></div>
                 </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-primer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Primer</span><span class="prep-cost">+£<span class="pc-primer"></span>/m²</span></div>
+                </label>
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-stone" onchange="rmToggleStoneW()">
+                    <div class="prep-text"><span>Natural Stone Install</span><span class="prep-cost">+£<span class="pc-stone"></span>/m²</span></div>
+                </label>
+                <div id="rm-w-sealer-row" class="hidden">
+                <label class="prep-option">
+                    <input type="checkbox" id="rm-w-sealer" onchange="rmCalc()">
+                    <div class="prep-text"><span>Stone Sealer</span><span class="prep-cost">+£<span class="pc-sealer"></span>/m²</span></div>
+                </label>
+                </div>
             </div>
             <!-- Extra walls -->
             <div id="extra-walls-list"></div>
@@ -765,6 +824,11 @@
                 <div class="field-group"><label>Clips (£ per 200)</label><input id="set-clip-price" type="number" step="0.50"></div>
                 <div class="field-group"><label>Wedges (£ per 200)</label><input id="set-wedge-price" type="number" step="0.50"></div>
                 <div class="field-group"><label>Tile Trim (£ per 2.5m length)</label><input id="set-trim-price" type="number" step="0.50"></div>
+            </div>
+            <div class="field-row">
+                <div class="field-group"><label>Primer (£/m²)</label><input id="set-primer-price" type="number" step="0.50"></div>
+                <div class="field-group"><label>Natural Stone Install (£/m²)</label><input id="set-stone-surcharge" type="number" step="0.50"></div>
+                <div class="field-group"><label>Stone Sealer (£/m²)</label><input id="set-sealer-price" type="number" step="0.50"></div>
             </div>
             <div class="form-section-label" style="margin-top:18px;">VAT</div>
             <div class="field-group"><label>Apply VAT by default?</label>

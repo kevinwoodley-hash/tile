@@ -38,6 +38,9 @@ let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
     clipPrice:      12,   // £ per bag of 200 clips
     wedgePrice:      8,   // £ per bag of 200 wedges
     trimPrice:       3.50, // £ per 2.5m length of trim
+    primerPrice:     3.50, // £/m² primer (walls & floors)
+    stoneSurcharge:  8.00, // £/m² extra labour for natural stone install
+    sealerPrice:     5.00, // £/m² stone sealer
     companyName:   "",
     companyPhone:  "",
     companyEmail:  "",
@@ -146,6 +149,9 @@ function updatePrepPriceBadges() {
     document.querySelectorAll(".pc-tank-r, .pc-tank-w, .pc-tank-f").forEach(el => el.textContent = S.tanking);
     document.querySelectorAll(".pc-clips").forEach(el => el.textContent = S.clipPrice || 12);
     document.querySelectorAll(".pc-trim").forEach(el => el.textContent = `£${(S.trimPrice || 3.50).toFixed(2)}`);
+    document.querySelectorAll(".pc-primer").forEach(el => el.textContent = S.primerPrice || 3.50);
+    document.querySelectorAll(".pc-stone").forEach(el => el.textContent = S.stoneSurcharge || 8.00);
+    document.querySelectorAll(".pc-sealer").forEach(el => el.textContent = S.sealerPrice || 5.00);
     updateLevelBadge("rm-r-leveldepth", ".pc-lev-r");
     updateLevelBadge("rm-f-leveldepth", ".pc-lev-f");
 }
@@ -167,6 +173,11 @@ function rmToggleLevelF() {
     document.getElementById("rm-f-level-depth").classList.toggle("hidden", !checked);
     rmCalc();
 }
+// Stone reveal sealer row
+function rmToggleStoneR()  { const c = document.getElementById("rm-r-stone").checked;  document.getElementById("rm-r-sealer-row").classList.toggle("hidden", !c);  if (!c) document.getElementById("rm-r-sealer").checked = false;  rmCalc(); }
+function rmToggleWStoneR() { const c = document.getElementById("rm-r-wstone").checked; document.getElementById("rm-r-wsealer-row").classList.toggle("hidden", !c); if (!c) document.getElementById("rm-r-wsealer").checked = false; rmCalc(); }
+function rmToggleStoneF()  { const c = document.getElementById("rm-f-stone").checked;  document.getElementById("rm-f-sealer-row").classList.toggle("hidden", !c);  if (!c) document.getElementById("rm-f-sealer").checked = false;  rmCalc(); }
+function rmToggleStoneW()  { const c = document.getElementById("rm-w-stone").checked;  document.getElementById("rm-w-sealer-row").classList.toggle("hidden", !c);  if (!c) document.getElementById("rm-w-sealer").checked = false;  rmCalc(); }
 
 /* ================================================================
    DASHBOARD
@@ -515,9 +526,14 @@ function clearRoomInputs() {
     document.getElementById("rm-r-floor-opts").style.display = "";
     // reset prep checkboxes
     ["rm-r-cementboard","rm-r-membrane","rm-r-levelling","rm-r-tanking","rm-r-clips",
+     "rm-r-primer","rm-r-stone","rm-r-sealer","rm-r-wprimer","rm-r-wstone","rm-r-wsealer",
      "rm-f-cementboard","rm-f-membrane","rm-f-levelling","rm-f-clips","rm-f-tanking",
-     "rm-w-tanking"].forEach(id => {
+     "rm-f-primer","rm-f-stone","rm-f-sealer",
+     "rm-w-tanking","rm-w-primer","rm-w-stone","rm-w-sealer"].forEach(id => {
         const el = document.getElementById(id); if (el) el.checked = false;
+    });
+    ["rm-r-sealer-row","rm-r-wsealer-row","rm-f-sealer-row","rm-w-sealer-row"].forEach(id => {
+        document.getElementById(id)?.classList.add("hidden");
     });
     document.getElementById("rm-r-level-depth").classList.add("hidden");
     document.getElementById("rm-f-level-depth").classList.add("hidden");
@@ -587,6 +603,10 @@ function restoreRoomInputs(room) {
             set("rm-r-wtilethick", walls[0].tileThick || 8);
             set("rm-r-wgrout", walls[0].grout);
             setCb("rm-r-tanking", walls[0].tanking);
+            setCb("rm-r-wprimer", walls[0].primer);
+            setCb("rm-r-wstone",  walls[0].stone);
+            setCb("rm-r-wsealer", walls[0].sealer);
+            if (walls[0].stone) document.getElementById("rm-r-wsealer-row").classList.remove("hidden");
         }
         if (floors.length) {
             setCb("rm-r-inclfloor", true);
@@ -599,6 +619,10 @@ function restoreRoomInputs(room) {
             setCb("rm-r-membrane",    floors[0].membrane);
             setCb("rm-r-levelling",   floors[0].levelling);
             setCb("rm-r-clips",       floors[0].clips);
+            setCb("rm-r-primer",      floors[0].primer);
+            setCb("rm-r-stone",       floors[0].stone);
+            setCb("rm-r-sealer",      floors[0].sealer);
+            if (floors[0].stone) document.getElementById("rm-r-sealer-row").classList.remove("hidden");
             if (floors[0].levelling) {
                 set("rm-r-leveldepth", floors[0].levelDepth || 2);
                 document.getElementById("rm-r-level-depth").classList.remove("hidden");
@@ -621,6 +645,10 @@ function restoreRoomInputs(room) {
         setCb("rm-f-levelling",   floors[0].levelling);
         setCb("rm-f-clips",       floors[0].clips);
         setCb("rm-f-tanking",     floors[0].tanking);
+        setCb("rm-f-primer",      floors[0].primer);
+        setCb("rm-f-stone",       floors[0].stone);
+        setCb("rm-f-sealer",      floors[0].sealer);
+        if (floors[0].stone) document.getElementById("rm-f-sealer-row").classList.remove("hidden");
         if (floors[0].levelling) {
             set("rm-f-leveldepth", floors[0].levelDepth || 2);
             document.getElementById("rm-f-level-depth").classList.remove("hidden");
@@ -633,6 +661,10 @@ function restoreRoomInputs(room) {
         set("rm-w-tilethick", walls[0].tileThick || 8);
         set("rm-w-grout",  walls[0].grout);
         setCb("rm-w-tanking", walls[0].tanking);
+        setCb("rm-w-primer",  walls[0].primer);
+        setCb("rm-w-stone",   walls[0].stone);
+        setCb("rm-w-sealer",  walls[0].sealer);
+        if (walls[0].stone) document.getElementById("rm-w-sealer-row").classList.remove("hidden");
     }
 
     // Restore extra surfaces (all beyond the primary one)
@@ -896,6 +928,7 @@ function buildExtraSurfaces() {
                     grout:s.grout||2, deduct:s.deduct||0,
                     ufh:!!s.ufh, cementBoard:!!s.cementBoard, membrane:!!s.membrane,
                     levelling:!!s.levelling, levelDepth:s.levelDepth||2, clips:!!s.clips,
+                    primer:!!s.primer, stone:!!s.stone, sealer:!!s.sealer,
                     area: Math.max(0, L * W - (parseFloat(s.deduct)||0))
                 };
             } else {
@@ -907,6 +940,7 @@ function buildExtraSurfaces() {
                     width:W, height:H,
                     tileW:s.tileW||300, tileH:s.tileH||600, tileThick:s.tileThick||8,
                     grout:s.grout||2, tanking:!!s.tanking,
+                    primer:!!s.primer, stone:!!s.stone, sealer:!!s.sealer,
                     area: Math.max(0, W * H - (parseFloat(s.deduct)||0))
                 };
             }
@@ -932,6 +966,9 @@ function buildSurfaces() {
         const wallGrout     = g("rm-r-wgrout")     || 2;
         const totalWallArea = 2 * (L + W) * H;
         const tanking = cb("rm-r-tanking");
+        const wPrimer = cb("rm-r-wprimer");
+        const wStone  = cb("rm-r-wstone");
+        const wSealer = cb("rm-r-wsealer");
 
         const surfaces = [
             { label:"Wall A (front)", width:L, height:H },
@@ -941,7 +978,7 @@ function buildSurfaces() {
         ].map(w => ({
             type:"wall", label:w.label, width:w.width, height:w.height,
             tileW:wallTileW, tileH:wallTileH, tileThick:wallTileThick, grout:wallGrout,
-            tanking,
+            tanking, primer:wPrimer, stone:wStone, sealer:wSealer,
             area: Math.max(0, w.width * w.height - deduct * (w.width * w.height / totalWallArea))
         }));
 
@@ -958,6 +995,9 @@ function buildSurfaces() {
                 levelling:   cb("rm-r-levelling"),
                 levelDepth:  parseInt(sv("rm-r-leveldepth")) || 2,
                 clips:       cb("rm-r-clips"),
+                primer:      cb("rm-r-primer"),
+                stone:       cb("rm-r-stone"),
+                sealer:      cb("rm-r-sealer"),
                 area: Math.max(0, L * W - floorDeduct)
             });
         }
@@ -980,6 +1020,9 @@ function buildSurfaces() {
             levelDepth:  parseInt(sv("rm-f-leveldepth")) || 2,
             clips:       cb("rm-f-clips"),
             tanking:     cb("rm-f-tanking"),
+            primer:      cb("rm-f-primer"),
+            stone:       cb("rm-f-stone"),
+            sealer:      cb("rm-f-sealer"),
             area: Math.max(0, L * W - fDed)
         }, ...buildExtraSurfaces()];
     }
@@ -995,6 +1038,9 @@ function buildSurfaces() {
             tileThick: g("rm-w-tilethick") || 8,
             grout:   g("rm-w-grout") || 2,
             tanking: cb("rm-w-tanking"),
+            primer:  cb("rm-w-primer"),
+            stone:   cb("rm-w-stone"),
+            sealer:  cb("rm-w-sealer"),
             area:    Math.max(0, W * H - wDed)
         }, ...buildExtraSurfaces()];
     }
@@ -1129,6 +1175,24 @@ const tileCost = customerTiles ? 0 : s.area * S.tilePrice;
         const rate = parseFloat(S.tanking) || 15;
         const c    = s.area * rate;
         s.prepCost += c; s.prepLines.push(`Tanking: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+    }
+    // Primer (floors and walls)
+    if (s.primer) {
+        const rate = parseFloat(S.primerPrice) || 3.50;
+        const c    = s.area * rate;
+        s.prepCost += c; s.prepLines.push(`Primer: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+    }
+    // Natural stone install surcharge
+    if (s.stone) {
+        const rate = parseFloat(S.stoneSurcharge) || 8.00;
+        const c    = s.area * rate;
+        s.prepCost += c; s.prepLines.push(`Natural Stone Install: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
+    }
+    // Stone sealer (only available when stone is selected)
+    if (s.stone && s.sealer) {
+        const rate = parseFloat(S.sealerPrice) || 5.00;
+        const c    = s.area * rate;
+        s.prepCost += c; s.prepLines.push(`Stone Sealer: ${s.area.toFixed(2)}m² × £${rate}/m² = £${c.toFixed(2)}`);
     }
 
     // Clip/wedge cost — only when opted in via s.clips flag
@@ -1595,7 +1659,10 @@ function goSettings() {
     document.getElementById("set-tanking").value        = s.tanking      || 15;
     document.getElementById("set-clip-price").value     = s.clipPrice    || 12;
     document.getElementById("set-wedge-price").value    = s.wedgePrice   || 8;
-    document.getElementById("set-trim-price").value     = s.trimPrice    || 3.50;
+    document.getElementById("set-trim-price").value     = s.trimPrice      || 3.50;
+    document.getElementById("set-primer-price").value   = s.primerPrice    || 3.50;
+    document.getElementById("set-stone-surcharge").value= s.stoneSurcharge || 8.00;
+    document.getElementById("set-sealer-price").value   = s.sealerPrice    || 5.00;
     document.getElementById("set-vat").value            = s.applyVat !== false ? "true" : "false";
     document.getElementById("set-company-name").value   = s.companyName  || "";
     document.getElementById("set-company-phone").value  = s.companyPhone || "";
@@ -1635,6 +1702,9 @@ function saveSettings() {
         clipPrice:     parseFloat(document.getElementById("set-clip-price").value)     || 12,
         wedgePrice:    parseFloat(document.getElementById("set-wedge-price").value)    || 8,
         trimPrice:     parseFloat(document.getElementById("set-trim-price").value)     || 3.50,
+        primerPrice:   parseFloat(document.getElementById("set-primer-price").value)   || 3.50,
+        stoneSurcharge:parseFloat(document.getElementById("set-stone-surcharge").value)|| 8.00,
+        sealerPrice:   parseFloat(document.getElementById("set-sealer-price").value)   || 5.00,
         applyVat:      document.getElementById("set-vat").value === "true",
         companyName:   document.getElementById("set-company-name").value.trim(),
         companyPhone:  document.getElementById("set-company-phone").value.trim(),
