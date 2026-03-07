@@ -5,8 +5,8 @@
    ================================================================ */
 
 /* ─── STATE ─────────────────────────────────────────────────── */
-let jobs     = JSON.parse(localStorage.getItem("tileiq-jobs"))     || [];
-let settings = JSON.parse(localStorage.getItem("tileiq-settings")) || {
+let jobs     = [];
+let settings = {
     tilePrice:     25.00,
     groutPrice25:  4.50,  // £ per 2.5kg bag
     groutPrice5:   7.50,  // £ per 5kg bag
@@ -70,7 +70,13 @@ function show(id) {
 }
 
 function getJob()  { return jobs.find(j => j.id === currentJobId); }
-function saveAll() { localStorage.setItem("tileiq-jobs", JSON.stringify(jobs)); }
+function saveAll() {
+    if (!currentUser) return;
+    sb.from("jobs").upsert(
+        jobs.map(j => ({ id: j.id, user_id: currentUser.id, data: j, updated_at: new Date().toISOString() })),
+        { onConflict: "id" }
+    ).then(({ error }) => { if (error) console.error("saveAll error:", error.message); });
+}
 function esc(s)    { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function uid()     { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
@@ -215,10 +221,58 @@ async function authForgot() {
 }
 
 /* ─── BOOT ───────────────────────────────────────────────────── */
-sb.auth.onAuthStateChange((event, session) => {
+async function loadUserData() {
+    // ── 1. Load settings ──────────────────────────────────────
+    const { data: settingsRow } = await sb.from("settings")
+        .select("data").eq("user_id", currentUser.id).maybeSingle();
+    if (settingsRow?.data) {
+        settings = { ...settings, ...settingsRow.data };
+    }
+
+    // ── 2. Load jobs ──────────────────────────────────────────
+    const { data: jobRows } = await sb.from("jobs")
+        .select("data").eq("user_id", currentUser.id).order("updated_at", { ascending: false });
+    if (jobRows?.length) {
+        jobs = jobRows.map(r => r.data);
+    }
+
+    // ── 3. Migrate localStorage if no cloud data yet ──────────
+    if (!jobRows?.length) {
+        const localJobs = localStorage.getItem("tileiq-jobs");
+        if (localJobs) {
+            try {
+                jobs = JSON.parse(localJobs);
+                // push to Supabase
+                await sb.from("jobs").upsert(
+                    jobs.map(j => ({ id: j.id, user_id: currentUser.id, data: j, updated_at: new Date().toISOString() })),
+                    { onConflict: "id" }
+                );
+                localStorage.removeItem("tileiq-jobs");
+                console.log("Migrated", jobs.length, "jobs from localStorage");
+            } catch(e) { console.error("Migration error:", e); }
+        }
+    }
+    if (!settingsRow?.data) {
+        const localSettings = localStorage.getItem("tileiq-settings");
+        if (localSettings) {
+            try {
+                settings = { ...settings, ...JSON.parse(localSettings) };
+                await sb.from("settings").upsert(
+                    { user_id: currentUser.id, data: settings, updated_at: new Date().toISOString() },
+                    { onConflict: "user_id" }
+                );
+                localStorage.removeItem("tileiq-settings");
+                console.log("Migrated settings from localStorage");
+            } catch(e) { console.error("Settings migration error:", e); }
+        }
+    }
+}
+
+sb.auth.onAuthStateChange(async (event, session) => {
     currentUser = session?.user || null;
     if (currentUser) {
         try {
+            await loadUserData();
             show("screen-dashboard");
             renderDashboard();
             updatePrepPriceBadges();
@@ -233,7 +287,7 @@ sb.auth.onAuthStateChange((event, session) => {
     }
 });
 
-// Kick off — show loading briefly then let onAuthStateChange take over
+// Initial check — show loading screen until auth state resolves
 setTimeout(() => {
     sb.auth.getSession().then(({ data: { session } }) => {
         if (!session) show("screen-signin");
@@ -487,9 +541,13 @@ function deleteRoom(idx) {
 function deleteJob() {
     const job = getJob();
     if (!confirm(`Delete job for ${job.customerName}? This cannot be undone.`)) return;
-    jobs = jobs.filter(j => j.id !== currentJobId);
+    const deletedId = currentJobId;
+    jobs = jobs.filter(j => j.id !== deletedId);
     currentJobId = null;
-    saveAll();
+    if (currentUser) {
+        sb.from("jobs").delete().eq("id", deletedId).eq("user_id", currentUser.id)
+          .then(({ error }) => { if (error) console.error("delete job error:", error.message); });
+    }
     goDashboard();
 }
 
@@ -1810,7 +1868,12 @@ function saveSettings() {
         companyEmail:  document.getElementById("set-company-email").value.trim(),
         terms:         document.getElementById("set-terms").value.trim()
     };
-    localStorage.setItem("tileiq-settings", JSON.stringify(settings));
+    if (currentUser) {
+        sb.from("settings").upsert(
+            { user_id: currentUser.id, data: settings, updated_at: new Date().toISOString() },
+            { onConflict: "user_id" }
+        ).then(({ error }) => { if (error) console.error("saveSettings error:", error.message); });
+    }
     goDashboard();
 }
 
