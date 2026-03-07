@@ -21,6 +21,70 @@
     </div>
 </div>
 
+<!-- SIGN IN -->
+<div id="screen-signin" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Sign in</h2>
+            <div id="signin-error" class="auth-error hidden"></div>
+            <div class="field-group"><label>Email</label><input id="si-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+            <div class="field-group"><label>Password</label><input id="si-password" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+            <button onclick="authSignIn()" class="btn-primary auth-btn" id="si-submit">Sign in</button>
+            <div class="auth-links">
+                <a href="#" onclick="showForgot();return false;">Forgot password?</a>
+                <span class="auth-sep">·</span>
+                <a href="#" onclick="show('screen-signup');return false;">Create account</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIGN UP -->
+<div id="screen-signup" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Create account</h2>
+            <div id="signup-error" class="auth-error hidden"></div>
+            <div class="field-group"><label>Name</label><input id="su-name" type="text" autocomplete="name" placeholder="Your name"></div>
+            <div class="field-group"><label>Email</label><input id="su-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+            <div class="field-group"><label>Password</label><input id="su-password" type="password" autocomplete="new-password" placeholder="Min. 6 characters"></div>
+            <button onclick="authSignUp()" class="btn-primary auth-btn" id="su-submit">Create account</button>
+            <div class="auth-links">
+                <a href="#" onclick="show('screen-signin');return false;">Already have an account? Sign in</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- VERIFY EMAIL -->
+<div id="screen-verify" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card" style="text-align:center;">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <div style="font-size:48px;margin:16px 0;">📬</div>
+            <h2 class="auth-title">Check your inbox</h2>
+            <p style="color:var(--muted);font-size:14px;margin-bottom:24px;">We've sent a verification link to <strong id="verify-email-display"></strong>. Click it to activate your account then come back here.</p>
+            <button onclick="show('screen-signin')" class="btn-secondary auth-btn">Back to sign in</button>
+        </div>
+    </div>
+</div>
+
+<!-- FORGOT PASSWORD -->
+<div id="screen-forgot" class="screen hidden">
+    <div class="auth-wrap">
+        <div class="auth-card">
+            <div class="auth-logo"><span class="brand-icon">⬛</span><span class="brand-name">TileIQ Pro</span></div>
+            <h2 class="auth-title">Reset password</h2>
+            <div id="forgot-msg" class="auth-error hidden"></div>
+            <div class="field-group"><label>Email</label><input id="fp-email" type="email" placeholder="you@example.com"></div>
+            <button onclick="authForgot()" class="btn-primary auth-btn">Send reset link</button>
+            <div class="auth-links"><a href="#" onclick="show('screen-signin');return false;">Back to sign in</a></div>
+        </div>
+    </div>
+</div>
+
 <!-- DASHBOARD -->
 <div id="screen-dashboard" class="screen hidden">
     <header class="app-header">
@@ -31,6 +95,7 @@
         <div class="header-actions">
             <button id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
             <button onclick="goSettings()" class="btn-icon">⚙</button>
+            <button onclick="authSignOut()" class="btn-icon" title="Sign out">⎋</button>
             <button onclick="goNewJob()" class="btn-primary">+ New Job</button>
         </div>
     </header>
@@ -897,6 +962,7 @@
     </div>
 
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js" defer></script>
 </body>
 </html>

@@ -127,18 +127,117 @@ function toggleTheme() {
     document.getElementById("theme-toggle").textContent = next === "dark" ? "☀️" : "🌙";
 }
 
-/* ─── BOOT ───────────────────────────────────────────────────── */
-setTimeout(() => {
-    try {
-        show("screen-dashboard");
-        renderDashboard();
-        updatePrepPriceBadges();
-        const btn = document.getElementById("theme-toggle");
-        if (btn && document.documentElement.getAttribute("data-theme") === "dark") btn.textContent = "☀️";
-    } catch(e) {
-        console.error("Boot error:", e);
-        show("screen-dashboard");
+/* ─── SUPABASE ───────────────────────────────────────────────── */
+const SB_URL = "https://lzwmqabxpxuuznhbpewm.supabase.co";
+const SB_KEY = "sb_publishable_bbLOe7wwtEWJhRxXZEKuuQ_QANTrsyr";
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+let currentUser = null;
+
+/* ─── AUTH FUNCTIONS ─────────────────────────────────────────── */
+function authSetLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? "Please wait…" : btn.dataset.label || btn.textContent;
+}
+function authShowError(elId, msg) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove("hidden");
+}
+function authHideError(elId) {
+    document.getElementById(elId)?.classList.add("hidden");
+}
+
+async function authSignIn() {
+    const email    = document.getElementById("si-email").value.trim();
+    const password = document.getElementById("si-password").value;
+    authHideError("signin-error");
+    if (!email || !password) { authShowError("signin-error", "Please enter your email and password."); return; }
+    document.getElementById("si-submit").disabled = true;
+    document.getElementById("si-submit").textContent = "Signing in…";
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    document.getElementById("si-submit").disabled = false;
+    document.getElementById("si-submit").textContent = "Sign in";
+    if (error) { authShowError("signin-error", error.message); return; }
+    // onAuthStateChange will handle the redirect
+}
+
+async function authSignUp() {
+    const name     = document.getElementById("su-name").value.trim();
+    const email    = document.getElementById("su-email").value.trim();
+    const password = document.getElementById("su-password").value;
+    authHideError("signup-error");
+    if (!email || !password) { authShowError("signup-error", "Please fill in all fields."); return; }
+    if (password.length < 6)  { authShowError("signup-error", "Password must be at least 6 characters."); return; }
+    document.getElementById("su-submit").disabled = true;
+    document.getElementById("su-submit").textContent = "Creating account…";
+    const { error } = await sb.auth.signUp({
+        email, password,
+        options: { data: { full_name: name } }
+    });
+    document.getElementById("su-submit").disabled = false;
+    document.getElementById("su-submit").textContent = "Create account";
+    if (error) { authShowError("signup-error", error.message); return; }
+    document.getElementById("verify-email-display").textContent = email;
+    show("screen-verify");
+}
+
+async function authSignOut() {
+    await sb.auth.signOut();
+    currentUser = null;
+    show("screen-signin");
+}
+
+function showForgot() {
+    document.getElementById("fp-email").value = document.getElementById("si-email")?.value || "";
+    authHideError("forgot-msg");
+    show("screen-forgot");
+}
+
+async function authForgot() {
+    const email = document.getElementById("fp-email").value.trim();
+    if (!email) { authShowError("forgot-msg", "Please enter your email."); return; }
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    const el = document.getElementById("forgot-msg");
+    el.classList.remove("hidden", "auth-error");
+    if (error) {
+        el.classList.add("auth-error");
+        el.textContent = error.message;
+    } else {
+        el.classList.add("auth-success");
+        el.textContent = "Reset link sent — check your inbox.";
     }
+}
+
+/* ─── BOOT ───────────────────────────────────────────────────── */
+sb.auth.onAuthStateChange((event, session) => {
+    currentUser = session?.user || null;
+    if (currentUser) {
+        try {
+            show("screen-dashboard");
+            renderDashboard();
+            updatePrepPriceBadges();
+            const btn = document.getElementById("theme-toggle");
+            if (btn && document.documentElement.getAttribute("data-theme") === "dark") btn.textContent = "☀️";
+        } catch(e) {
+            console.error("Boot error:", e);
+            show("screen-dashboard");
+        }
+    } else {
+        show("screen-signin");
+    }
+});
+
+// Kick off — show loading briefly then let onAuthStateChange take over
+setTimeout(() => {
+    sb.auth.getSession().then(({ data: { session } }) => {
+        if (!session) show("screen-signin");
+    });
 }, 800);
 
 /* Fill in the £/m² cost hints on all prep option labels */
