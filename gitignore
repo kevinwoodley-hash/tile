@@ -1,0 +1,7 @@
+node_modules/
+ios/
+.env
+.env.local
+google-play-service-account.json
+*.jks
+*.keystore
