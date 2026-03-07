@@ -1753,6 +1753,7 @@ function renderMaterials() {
     let grandFloorGroutKg = 0;
     let grandCBBoards = 0, grandLevelBags = 0;
     let grandClips = 0, grandWedges = 0;
+    let grandPrimerM2 = 0, grandSealerM2 = 0;
     let hasUFH = false;
 
     const roomBlocks = rooms.map(room => {
@@ -1784,8 +1785,10 @@ function renderMaterials() {
             }
             if (s.cementBoards) grandCBBoards  += s.cementBoards;
             if (s.levelBags)    grandLevelBags += s.levelBags;
-            grandClips  += s.clips ? (s.levelClips  || 0) : 0;
-            grandWedges += s.clips ? (s.levelWedges || 0) : 0;
+            grandClips    += s.clips ? (s.levelClips  || 0) : 0;
+            grandWedges   += s.clips ? (s.levelWedges || 0) : 0;
+            if (s.primer)       grandPrimerM2  += s.area || 0;
+            if (s.stone && s.sealer) grandSealerM2 += s.area || 0;
             if (s.ufh)          hasUFH = true;
 
             const prepItems = [];
@@ -1855,6 +1858,8 @@ function renderMaterials() {
             ${grandLevelBags > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Levelling</span><span class="mat-total-value">${grandLevelBags} × 20kg bag${grandLevelBags!==1?"s":""}</span></div>` : ""}
             ${grandClips     > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Levelling Clips</span><span class="mat-total-value">${grandClips}</span></div>` : ""}
             ${grandWedges    > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Wedges</span><span class="mat-total-value">${grandWedges}</span></div>` : ""}
+            ${grandPrimerM2  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Primer</span><span class="mat-total-value">${grandPrimerM2.toFixed(2)} m²</span></div>` : ""}
+            ${grandSealerM2  > 0 ? `<div class="mat-total-item"><span class="mat-total-label">Stone Sealer</span><span class="mat-total-value">${grandSealerM2.toFixed(2)} m²</span></div>` : ""}
         </div>
     </div>`;
 
