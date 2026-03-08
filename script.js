@@ -65,7 +65,9 @@ const DEDUCT_PRESETS = {
 /* ─── HELPERS ────────────────────────────────────────────────── */
 function show(id) {
     document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
-    document.getElementById(id).classList.remove("hidden");
+    const el = document.getElementById(id);
+    if (el) el.classList.remove("hidden");
+    else console.error("show(): element not found:", id);
     window.scrollTo(0, 0);
 }
 
@@ -136,24 +138,7 @@ function toggleTheme() {
 /* ─── SUPABASE ───────────────────────────────────────────────── */
 const SB_URL = "https://lzwmqabxpxuuznhbpewm.supabase.co";
 const SB_KEY = "sb_publishable_bbLOe7wwtEWJhRxXZEKuuQ_QANTrsyr";
-const sb = supabase.createClient(SB_URL, SB_KEY, {
-    auth: {
-        // On mobile (Capacitor) use the custom scheme for redirects
-        redirectTo: (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform?.())
-            ? "com.tileiq.pro://"
-            : window.location.origin + window.location.pathname,
-        detectSessionInUrl: true,
-        persistSession: true,
-        autoRefreshToken: true
-    }
-});
-
-// Handle auth redirect on app resume (mobile deep link)
-if (typeof Capacitor !== "undefined") {
-    document.addEventListener("deviceready", () => {
-        sb.auth.getSession(); // re-check session after deep link return
-    });
-}
+const sb = supabase.createClient(SB_URL, SB_KEY);
 
 let currentUser = null;
 
@@ -285,31 +270,33 @@ async function loadUserData() {
     }
 }
 
-sb.auth.onAuthStateChange(async (event, session) => {
-    currentUser = session?.user || null;
-    if (currentUser) {
-        try {
-            await loadUserData();
-            show("screen-dashboard");
-            renderDashboard();
-            updatePrepPriceBadges();
-            const btn = document.getElementById("theme-toggle");
-            if (btn && document.documentElement.getAttribute("data-theme") === "dark") btn.textContent = "☀️";
-        } catch(e) {
-            console.error("Boot error:", e);
-            show("screen-dashboard");
+document.addEventListener("DOMContentLoaded", () => {
+    sb.auth.onAuthStateChange(async (event, session) => {
+        currentUser = session?.user || null;
+        if (currentUser) {
+            try {
+                await loadUserData();
+                show("screen-dashboard");
+                renderDashboard();
+                updatePrepPriceBadges();
+                const btn = document.getElementById("theme-toggle");
+                if (btn && document.documentElement.getAttribute("data-theme") === "dark") btn.textContent = "☀️";
+            } catch(e) {
+                console.error("Boot error:", e);
+                show("screen-dashboard");
+            }
+        } else {
+            show("screen-signin");
         }
-    } else {
-        show("screen-signin");
-    }
-});
-
-// Initial check — show loading screen until auth state resolves
-setTimeout(() => {
-    sb.auth.getSession().then(({ data: { session } }) => {
-        if (!session) show("screen-signin");
     });
-}, 800);
+
+    // Initial check — show loading screen until auth state resolves
+    setTimeout(() => {
+        sb.auth.getSession().then(({ data: { session } }) => {
+            if (!session) show("screen-signin");
+        });
+    }, 800);
+});
 
 /* Fill in the £/m² cost hints on all prep option labels */
 function updatePrepPriceBadges() {
